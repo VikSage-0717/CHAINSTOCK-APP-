@@ -1,0 +1,48 @@
+# Expo
+.expo/
+.expo-shared/
+dist/
+
+# Node
+node_modules/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+yarn-error.*
+
+# Development
+.vscode/
+.idea/
+.DS_Store
+.env
+.env.local
+.env.*.local
+
+# Editor
+*.swp
+*.swo
+*~
+.vimrc
+
+# Build artifacts
+*.o
+*.a
+*.lib
+*.so
+*.dylib
+
+# IDE specific files
+.gradle/
+build/
+.android/
+.ios/
+ios/Pods/
+ios/Podfile.lock
+
+# React Native
+react-native-config.json
