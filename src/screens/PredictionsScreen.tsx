@@ -5,24 +5,78 @@ import {
   ScrollView,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { Brain, Sparkles } from 'lucide-react-native';
-import { generatePredictions, Prediction } from '../utils/mockData';
+import { getDashboardAssets, getAssetPrediction } from '../utils/api';
+
+interface PredictionItem {
+  symbol: string;
+  name: string;
+  currentPrice: number;
+  predictedPrice: number;
+  confidence: number;
+  timeframe: string;
+  trend: 'bullish' | 'bearish' | 'neutral';
+}
 
 export default function PredictionsScreen() {
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [predictions, setPredictions] = useState<PredictionItem[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState('24h');
+  const [isLoading, setIsLoading] = useState(true);
 
   const timeframes = ['24h', '7d', '30d'];
 
   useEffect(() => {
-    setPredictions(generatePredictions(selectedTimeframe));
+    const fetchPredictionsData = async () => {
+      setIsLoading(true);
+      try {
+        const assets = await getDashboardAssets();
+        
+        if (!assets || assets.length === 0) {
+          setPredictions([]);
+          setIsLoading(false);
+          return;
+        }
 
-    const interval = setInterval(() => {
-      setPredictions(generatePredictions(selectedTimeframe));
-    }, 10000);
+        const newPredictions: PredictionItem[] = [];
+        // Get first 10 assets instead of 6 to show more variety
+        const topAssets = assets.slice(0, 10);
 
-    return () => clearInterval(interval);
+        for (const asset of topAssets) {
+          try {
+            const pred = await getAssetPrediction(asset.symbol);
+            if (pred && pred.predictions && pred.predictions.length > 0) {
+              const selectedPred = pred.predictions.find(
+                (p: any) => p.timeframe === selectedTimeframe
+              );
+              if (selectedPred) {
+                newPredictions.push({
+                  symbol: asset.symbol,
+                  name: asset.name,
+                  currentPrice: asset.price || 0,
+                  predictedPrice: selectedPred.predictedPrice || asset.price,
+                  confidence: selectedPred.confidence || 65,
+                  timeframe: selectedTimeframe,
+                  trend: selectedPred.trend || 'neutral',
+                });
+              }
+            }
+          } catch (assetError) {
+            console.error(`Error fetching prediction for ${asset.symbol}:`, assetError);
+            // Continue with next asset
+          }
+        }
+        setPredictions(newPredictions);
+      } catch (error) {
+        console.error('Error fetching predictions:', error);
+        setPredictions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPredictionsData();
   }, [selectedTimeframe]);
 
   const getTrendColor = (trend: 'bullish' | 'bearish' | 'neutral') => {
@@ -36,8 +90,20 @@ export default function PredictionsScreen() {
     }
   };
 
-  const PredictionCard = ({ item }: { item: Prediction }) => {
+  const getTrendBgColor = (trend: 'bullish' | 'bearish' | 'neutral') => {
+    switch (trend) {
+      case 'bullish':
+        return '#dcfce7';
+      case 'bearish':
+        return '#fee2e2';
+      default:
+        return '#f3f4f6';
+    }
+  };
+
+  const PredictionCard = ({ item }: { item: PredictionItem }) => {
     const trendColor = getTrendColor(item.trend);
+    const trendBgColor = getTrendBgColor(item.trend);
     const percentDiff = (
       ((item.predictedPrice - item.currentPrice) / item.currentPrice) *
       100
@@ -84,7 +150,7 @@ export default function PredictionsScreen() {
           </View>
           <View
             style={{
-              backgroundColor: '#f3f4f6',
+              backgroundColor: trendBgColor,
               paddingHorizontal: 8,
               paddingVertical: 6,
               borderRadius: 6,
@@ -94,7 +160,7 @@ export default function PredictionsScreen() {
               style={{
                 fontSize: 12,
                 fontWeight: '600',
-                color: '#4b5563',
+                color: trendColor,
                 textTransform: 'capitalize',
               }}
             >
@@ -219,7 +285,7 @@ export default function PredictionsScreen() {
               color: '#6b7280',
             }}
           >
-            AI Confidence
+            Prediction Confidence
           </Text>
           <Text
             style={{
@@ -228,12 +294,46 @@ export default function PredictionsScreen() {
               color: '#111827',
             }}
           >
-            {item.confidence}%
+            {Math.round(item.confidence)}%
           </Text>
         </View>
       </View>
     );
   };
+
+  const renderEmptyState = () => (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+      }}
+    >
+      <Sparkles size={48} color="#d1d5db" style={{ marginBottom: 16 }} />
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: '700',
+          color: '#6b7280',
+          marginBottom: 8,
+        }}
+      >
+        {isLoading ? 'Loading predictions...' : 'No predictions available'}
+      </Text>
+      <Text
+        style={{
+          fontSize: 14,
+          color: '#9ca3af',
+          textAlign: 'center',
+        }}
+      >
+        {isLoading
+          ? 'Analyzing market data with our ML models'
+          : 'Check back later for market forecasts'}
+      </Text>
+    </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
@@ -308,7 +408,8 @@ export default function PredictionsScreen() {
                 color: '#4b5563',
               }}
             >
-              Our ML models analyze historical data, market sentiment, and volumes to predict price movements.
+              Our ML models analyze historical data, market sentiment, and
+              volumes to predict price movements.
             </Text>
           </View>
         </View>
@@ -349,16 +450,22 @@ export default function PredictionsScreen() {
       </View>
 
       {/* Predictions List */}
-      <FlatList
-        data={predictions}
-        renderItem={({ item }) => <PredictionCard item={item} />}
-        keyExtractor={(item) => `${item.symbol}-${item.timeframe}`}
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingVertical: 16,
-        }}
-        scrollEnabled={true}
-      />
+      {isLoading && predictions.length === 0 ? (
+        renderEmptyState()
+      ) : predictions.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <FlatList
+          data={predictions}
+          renderItem={({ item }) => <PredictionCard item={item} />}
+          keyExtractor={(item) => `${item.symbol}-${item.timeframe}`}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingVertical: 16,
+          }}
+          scrollEnabled={true}
+        />
+      )}
     </View>
   );
 }

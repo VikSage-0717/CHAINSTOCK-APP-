@@ -5,12 +5,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, StatusBar } from 'react-native';
 import { Home, TrendingUp, History, BarChart3 } from 'lucide-react-native';
 
-import LandingScreen from '../screens/LandingScreen';
-import DashboardScreen from '../screens/DashboardScreen';
-import PredictionsScreen from '../screens/PredictionsScreen';
-import HistoricalEventsScreen from '../screens/HistoricalEventsScreen';
-import PortfolioScreen from '../screens/PortfolioScreen';
-import AssetDetailScreen from '../screens/AssetDetailScreen';
+import LandingScreen from './src/screens/LandingScreen';
+import DashboardScreen from './src/screens/DashboardScreen';
+import PredictionsScreen from './src/screens/PredictionsScreen';
+import HistoricalEventsScreen from './src/screens/HistoricalEventsScreen';
+import PortfolioScreen from './src/screens/PortfolioScreen';
+import AssetDetailScreen from './src/screens/AssetDetailScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
