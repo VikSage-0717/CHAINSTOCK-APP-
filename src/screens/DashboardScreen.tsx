@@ -8,11 +8,12 @@ import {
   RefreshControl,
   FlatList,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { RefreshCw, Search } from 'lucide-react-native';
 import { Asset } from '../utils/mockData';
-import { getDashboardAssets, searchAssets, getAssetDetails } from '../utils/api';
+import { getDashboardAssets, searchAssets, getAssetDetails, getAssetPrediction } from '../utils/api';
 
 interface NavigationProp {
   navigate: (screen: string, params?: any) => void;
@@ -24,6 +25,7 @@ export default function DashboardScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [devRunning, setDevRunning] = useState(false);
 
   const [searchResults, setSearchResults] = useState<Asset[]>([]);
 
@@ -275,24 +277,62 @@ export default function DashboardScreen() {
               Real-time Market Analysis
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={handleRefresh}
-            disabled={isRefreshing}
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: '#2563eb',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            {isRefreshing ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <RefreshCw size={20} color="#ffffff" />
-            )}
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={handleRefresh}
+              disabled={isRefreshing}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: '#2563eb',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              {isRefreshing ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <RefreshCw size={20} color="#ffffff" />
+              )}
+            </TouchableOpacity>
+
+            {(() => {
+              const isDevVisible = __DEV__ || (typeof globalThis !== 'undefined' && (globalThis as any).location && (((globalThis as any).location.hostname === 'localhost') || ((globalThis as any).location.hostname === '127.0.0.1') || String((globalThis as any).location.href).indexOf('dev=1') !== -1));
+              return isDevVisible ? (
+                <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    setDevRunning(true);
+                    console.log('Dev: fetching dashboard assets...');
+                    const assets = await getDashboardAssets();
+                    console.log('Dev assets:', assets?.map(a => a.symbol));
+                    const targets = (assets || []).slice(0, 8);
+                    for (const t of targets) {
+                      try {
+                        console.log(`Dev: requesting prediction for ${t.symbol}`);
+                        const pred = await getAssetPrediction(t.symbol);
+                        console.log('Dev prediction:', t.symbol, pred);
+                      } catch (err) {
+                        console.error('Dev prediction error for', t.symbol, err);
+                      }
+                    }
+                    Alert.alert('Dev run', 'Dev predictions complete — check console logs.');
+                  } catch (err) {
+                    console.error('Dev run failed', err);
+                    Alert.alert('Dev run', 'Dev run failed: ' + ((err as any)?.message || String(err)));
+                  } finally {
+                    setDevRunning(false);
+                  }
+                }}
+                disabled={devRunning}
+                style={{ paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: '#f3f4f6' }}
+              >
+                <Text style={{ color: '#111827', fontWeight: '600' }}>{devRunning ? 'Running...' : 'Dev: Run'}</Text>
+              </TouchableOpacity>
+              ) : null;
+            })()}
+          </View>
         </View>
 
         {/* Search Bar */}

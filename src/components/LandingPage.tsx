@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Brain, History, Sparkles, ArrowRight, BarChart3, ChevronDown, RefreshCw } from 'lucide-react';
+import { getDashboardAssets, getAssetPrediction } from '../utils/api';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -9,6 +10,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
   const [tickerIndex, setTickerIndex] = useState(0);
+  const [devRunning, setDevRunning] = useState(false);
 
   const tickerItems = [
     { symbol: 'BTC', price: '$67,432', change: '+2.4%' },
@@ -56,6 +58,38 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
     }, 3000);
     return () => clearInterval(tickerInterval);
   }, []);
+
+  const isDev = (typeof process !== 'undefined' && process?.env?.NODE_ENV === 'development') ||
+    (typeof window !== 'undefined' && window.location && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.href.indexOf('dev=1') !== -1
+    ));
+
+  const runDevPredictions = async () => {
+    try {
+      setDevRunning(true);
+      console.log('Dev: fetching dashboard assets...');
+      const assets = await getDashboardAssets();
+      console.log('Dev: assets', assets?.map((a: any) => a.symbol));
+      const targets = (assets || []).slice(0, 8);
+      for (const t of targets) {
+        try {
+          console.log(`Dev: requesting prediction for ${t.symbol}`);
+          const pred = await getAssetPrediction(t.symbol);
+          console.log('Dev prediction:', t.symbol, pred);
+        } catch (err) {
+          console.error('Dev prediction error for', t.symbol, err);
+        }
+      }
+      alert('Dev predictions complete — check console logs.');
+    } catch (err) {
+      console.error('Dev run failed', err);
+      alert('Dev run failed: ' + (err as any)?.message || String(err));
+    } finally {
+      setDevRunning(false);
+    }
+  };
 
   return (
     <div className="size-full bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 overflow-auto">
@@ -158,6 +192,18 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
 
         {/* CTA Button */}
         <div className="w-full max-w-md space-y-4">
+          {isDev && (
+            <div>
+              <button
+                onClick={runDevPredictions}
+                disabled={devRunning}
+                className="w-full bg-white/20 text-white py-3 px-6 rounded-2xl font-semibold text-sm border border-white/30 hover:bg-white/30 mb-2"
+              >
+                {devRunning ? 'Running predictions...' : 'Dev: Run Predictions'}
+              </button>
+            </div>
+          )}
+
           <button
             onClick={onGetStarted}
             className="w-full bg-white text-purple-600 py-4 px-8 rounded-2xl font-bold text-lg shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group"
