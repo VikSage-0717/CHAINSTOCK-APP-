@@ -7,10 +7,12 @@ import {
   TextInput,
   RefreshControl,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { RefreshCw, Search } from 'lucide-react-native';
-import { generateMockAssets, generateChartData, Asset } from '../utils/mockData';
+import { Asset } from '../utils/mockData';
+import { getDashboardAssets, searchAssets, getAssetDetails } from '../utils/api';
 
 interface NavigationProp {
   navigate: (screen: string, params?: any) => void;
@@ -23,33 +25,65 @@ export default function DashboardScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    setAssets(generateMockAssets());
-    setIsLoading(false);
+  const [searchResults, setSearchResults] = useState<Asset[]>([]);
 
-    const interval = setInterval(() => {
-      setAssets(generateMockAssets());
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setAssets(generateMockAssets());
-    setTimeout(() => setIsRefreshing(false), 500);
+  const loadAssets = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getDashboardAssets();
+      if (data && data.length > 0) {
+        setAssets(data);
+      } else {
+        setAssets([]);
+      }
+    } catch (error) {
+      console.error('Error loading assets:', error);
+      setAssets([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleAssetClick = (asset: Asset) => {
+  useEffect(() => {
+    loadAssets();
+
+    const interval = setInterval(() => {
+      if (!searchQuery) {
+        loadAssets();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (searchQuery.length > 1) {
+      const delayDebounceFn = setTimeout(async () => {
+        setIsLoading(true);
+        const results = await searchAssets(searchQuery);
+        setSearchResults(results);
+        setIsLoading(false);
+      }, 500);
+
+      return () => clearTimeout(delayDebounceFn);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadAssets();
+    setIsRefreshing(false);
+  };
+
+  const handleAssetClick = async (asset: Asset) => {
     navigation.navigate('AssetDetail', {
       asset,
     });
   };
 
-  const filteredAssets = assets.filter(asset =>
-    asset.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    asset.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const displayAssets = searchQuery.length > 1 ? searchResults : assets;
 
   const AssetCard = ({ asset }: { asset: Asset }) => {
     const isPositive = asset.changePercent >= 0;
@@ -74,16 +108,42 @@ export default function DashboardScreen() {
           }}
         >
           <View style={{ flex: 1 }}>
-            <Text
+            <View
               style={{
-                fontSize: 16,
-                fontWeight: '700',
-                color: '#111827',
+                flexDirection: 'row',
+                alignItems: 'center',
                 marginBottom: 4,
+                gap: 8,
               }}
             >
-              {asset.symbol}
-            </Text>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: '700',
+                  color: '#111827',
+                }}
+              >
+                {asset.symbol}
+              </Text>
+              <View
+                style={{
+                  backgroundColor: asset.type === 'crypto' ? '#fef3c7' : '#dbeafe',
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  borderRadius: 3,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontWeight: '600',
+                    color: asset.type === 'crypto' ? '#92400e' : '#0284c7',
+                  }}
+                >
+                  {asset.type === 'crypto' ? 'CRYPTO' : 'STOCK'}
+                </Text>
+              </View>
+            </View>
             <Text
               style={{
                 fontSize: 13,
@@ -110,31 +170,70 @@ export default function DashboardScreen() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 4,
+                backgroundColor: isPositive ? '#dcfce7' : '#fee2e2',
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: 4,
               }}
             >
               <Text
                 style={{
                   fontSize: 14,
                   fontWeight: '600',
-                  color: isPositive ? '#10b981' : '#ef4444',
+                  color: isPositive ? '#166534' : '#991b1b',
                 }}
               >
                 {isPositive ? '+' : ''}{asset.changePercent.toFixed(2)}%
               </Text>
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: isPositive ? '#10b981' : '#ef4444',
-                }}
-              />
             </View>
           </View>
         </View>
       </TouchableOpacity>
     );
   };
+
+  const renderEmptyState = () => (
+    <ScrollView
+      contentContainerStyle={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+      }}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          tintColor="#2563eb"
+        />
+      }
+    >
+      <View style={{ alignItems: 'center' }}>
+        <Search size={48} color="#d1d5db" style={{ marginBottom: 16 }} />
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: '700',
+            color: '#6b7280',
+            marginBottom: 8,
+          }}
+        >
+          {searchQuery ? 'No results found' : 'Loading assets...'}
+        </Text>
+        <Text
+          style={{
+            fontSize: 14,
+            color: '#9ca3af',
+            textAlign: 'center',
+          }}
+        >
+          {searchQuery
+            ? `No assets match "${searchQuery}"`
+            : 'Fetching real-time market data'}
+        </Text>
+      </View>
+    </ScrollView>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
@@ -178,6 +277,7 @@ export default function DashboardScreen() {
           </View>
           <TouchableOpacity
             onPress={handleRefresh}
+            disabled={isRefreshing}
             style={{
               width: 48,
               height: 48,
@@ -187,7 +287,11 @@ export default function DashboardScreen() {
               alignItems: 'center',
             }}
           >
-            <RefreshCw size={20} color="#ffffff" />
+            {isRefreshing ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <RefreshCw size={20} color="#ffffff" />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -219,23 +323,29 @@ export default function DashboardScreen() {
       </View>
 
       {/* Assets List */}
-      <FlatList
-        data={filteredAssets}
-        renderItem={({ item }) => <AssetCard asset={item} />}
-        keyExtractor={(item) => item.symbol}
-        scrollEnabled={true}
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingVertical: 16,
-        }}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor="#2563eb"
-          />
-        }
-      />
+      {isLoading && displayAssets.length === 0 ? (
+        renderEmptyState()
+      ) : displayAssets.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <FlatList
+          data={displayAssets}
+          renderItem={({ item }) => <AssetCard asset={item} />}
+          keyExtractor={(item) => item.symbol}
+          scrollEnabled={true}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingVertical: 16,
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor="#2563eb"
+            />
+          }
+        />
+      )}
     </View>
   );
 }

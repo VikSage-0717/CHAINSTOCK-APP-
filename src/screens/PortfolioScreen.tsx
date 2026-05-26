@@ -3,92 +3,138 @@ import {
   View,
   Text,
   ScrollView,
-  FlatList,
+  TouchableOpacity,
   Dimensions,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
-import { Wallet, TrendingUp } from 'lucide-react-native';
-import { PieChart } from 'react-native-svg-charts';
+import { Wallet, Plus, TrendingUp, X } from 'lucide-react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { getHoldings, sellHolding } from '../utils/portfolio';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
+interface NavigationProp {
+  navigate: (screen: string, params?: any) => void;
+}
+
 export default function PortfolioScreen() {
-  const portfolioData = [
-    { name: 'Bitcoin', value: 45000, percentage: 40, color: '#f7931a' },
-    { name: 'Ethereum', value: 28000, percentage: 25, color: '#627eea' },
-    { name: 'Stocks', value: 22000, percentage: 20, color: '#10b981' },
-    { name: 'Altcoins', value: 11000, percentage: 10, color: '#8b5cf6' },
-    { name: 'Cash', value: 5600, percentage: 5, color: '#6b7280' },
-  ];
+  const navigation = useNavigation<NavigationProp>();
+  const [holdings, setHoldings] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [sellModalVisible, setSellModalVisible] = React.useState(false);
+  const [selectedForSell, setSelectedForSell] = React.useState<any>(null);
+  const [sellAmount, setSellAmount] = React.useState('');
 
-  const totalValue = portfolioData.reduce((sum, item) => sum + item.value, 0);
-  const totalGain = 15420;
-  const totalGainPercent = 15.8;
+  const totalValue = holdings.reduce((sum, item) => sum + (item.amount * item.price), 0);
+  const totalGain = 0;
+  const totalGainPercent = 0;
+  const isEmpty = !isLoading && holdings.length === 0;
 
-  const holdings = [
-    {
-      symbol: 'BTC',
-      name: 'Bitcoin',
-      amount: 0.67,
-      value: 45000,
-      change: 12.4,
-      isPositive: true,
-    },
-    {
-      symbol: 'ETH',
-      name: 'Ethereum',
-      amount: 8.75,
-      value: 28000,
-      change: 8.2,
-      isPositive: true,
-    },
-    {
-      symbol: 'AAPL',
-      name: 'Apple',
-      amount: 125,
-      value: 22000,
-      change: -2.3,
-      isPositive: false,
-    },
-    {
-      symbol: 'SOL',
-      name: 'Solana',
-      amount: 75,
-      value: 11000,
-      change: 18.7,
-      isPositive: true,
-    },
-  ];
+  useFocusEffect(
+    React.useCallback(() => {
+      let isActive = true;
 
-  const pieData = portfolioData.map(item => ({
-    value: item.value,
-    svg: {
-      fill: item.color,
-    },
-    key: item.name,
-  }));
+      const loadHoldings = async () => {
+        try {
+          const currentHoldings = await getHoldings();
+          if (isActive) {
+            setHoldings(currentHoldings);
+          }
+        } catch (error) {
+          console.error('Error loading portfolio:', error);
+          if (isActive) {
+            setHoldings([]);
+          }
+        } finally {
+          if (isActive) {
+            setIsLoading(false);
+          }
+        }
+      };
+
+      loadHoldings();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
+
+  const handleSellPress = (holding: any) => {
+    setSelectedForSell(holding);
+    setSellAmount('');
+    setSellModalVisible(true);
+  };
+
+  const handleConfirmSell = async () => {
+    if (!selectedForSell || !sellAmount) return;
+
+    const amount = parseFloat(sellAmount);
+    if (isNaN(amount) || amount <= 0 || amount > selectedForSell.amount) {
+      Alert.alert('Invalid Amount', 'Please enter a valid amount to sell');
+      return;
+    }
+
+    try {
+      const success = await sellHolding(selectedForSell.symbol, amount);
+      if (success) {
+        setSellModalVisible(false);
+        setSelectedForSell(null);
+        setSellAmount('');
+        
+        // Reload holdings
+        const updated = await getHoldings();
+        setHoldings(updated);
+        
+        Alert.alert('Success', `Sold ${amount} ${selectedForSell.symbol} shares`);
+      } else {
+        Alert.alert('Error', 'Could not complete the sale');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to sell shares');
+      console.error('Sell error:', error);
+    }
+  };
 
   const HoldingCard = ({ holding }: any) => {
+    const value = holding.amount * holding.price;
+    const changeAmount = value * (holding.changePercent / 100);
+
     return (
       <View
         style={{
+          backgroundColor: '#ffffff',
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 12,
+          borderWidth: 1,
+          borderColor: '#e5e7eb',
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-          paddingVertical: 12,
-          borderBottomWidth: 1,
-          borderBottomColor: '#f3f4f6',
         }}
       >
         <View style={{ flex: 1 }}>
           <Text
             style={{
-              fontSize: 14,
-              fontWeight: '600',
+              fontSize: 16,
+              fontWeight: '700',
               color: '#111827',
-              marginBottom: 2,
+              marginBottom: 4,
             }}
           >
             {holding.symbol}
+          </Text>
+          <Text
+            style={{
+              fontSize: 13,
+              color: '#6b7280',
+              marginBottom: 4,
+            }}
+          >
+            {holding.amount.toFixed(4)} {holding.symbol}
           </Text>
           <Text
             style={{
@@ -96,31 +142,51 @@ export default function PortfolioScreen() {
               color: '#6b7280',
             }}
           >
-            {holding.amount} {holding.symbol}
+            @ ${holding.price.toFixed(2)}
           </Text>
         </View>
 
-        <View style={{ alignItems: 'flex-end' }}>
+        <View style={{ alignItems: 'flex-end', marginRight: 12 }}>
           <Text
             style={{
-              fontSize: 14,
-              fontWeight: '600',
+              fontSize: 16,
+              fontWeight: '700',
               color: '#111827',
-              marginBottom: 2,
+              marginBottom: 4,
             }}
           >
-            ${holding.value.toLocaleString()}
+            ${value.toFixed(2)}
           </Text>
           <Text
             style={{
               fontSize: 12,
               fontWeight: '600',
-              color: holding.isPositive ? '#10b981' : '#ef4444',
+              color: holding.changePercent >= 0 ? '#10b981' : '#ef4444',
             }}
           >
-            {holding.isPositive ? '+' : ''}{holding.change}%
+            {holding.changePercent >= 0 ? '+' : ''}{holding.changePercent.toFixed(2)}%
           </Text>
         </View>
+
+        <TouchableOpacity
+          onPress={() => handleSellPress(holding)}
+          style={{
+            backgroundColor: '#fee2e2',
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 6,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: '600',
+              color: '#dc2626',
+            }}
+          >
+            Sell
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -165,7 +231,7 @@ export default function PortfolioScreen() {
             color: '#6b7280',
           }}
         >
-          Track your investments
+          {isLoading ? 'Loading your portfolio...' : isEmpty ? 'Your portfolio is empty' : 'Track your investments'}
         </Text>
       </View>
 
@@ -179,9 +245,10 @@ export default function PortfolioScreen() {
         {/* Total Value Card */}
         <View
           style={{
-            backgroundColor: 'linear-gradient(to right, #16a34a, #059669)',
+            backgroundColor: '#16a34a',
             borderRadius: 12,
-            padding: 20,
+            paddingVertical: 20,
+            paddingHorizontal: 16,
             marginBottom: 20,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
@@ -190,34 +257,27 @@ export default function PortfolioScreen() {
             elevation: 4,
           }}
         >
-          <View
+          <Text
             style={{
-              backgroundColor: '#16a34a',
-              borderRadius: 12,
-              paddingVertical: 20,
-              paddingHorizontal: 16,
+              fontSize: 12,
+              color: 'rgba(255, 255, 255, 0.9)',
+              marginBottom: 8,
             }}
           >
-            <Text
-              style={{
-                fontSize: 12,
-                color: 'rgba(255, 255, 255, 0.9)',
-                marginBottom: 4,
-              }}
-            >
-              Total Portfolio Value
-            </Text>
-            <Text
-              style={{
-                fontSize: 36,
-                fontWeight: '700',
-                color: '#ffffff',
-                marginBottom: 12,
-              }}
-            >
-              ${totalValue.toLocaleString()}
-            </Text>
+            Total Portfolio Value
+          </Text>
+          <Text
+            style={{
+              fontSize: 40,
+              fontWeight: '700',
+              color: '#ffffff',
+              marginBottom: 16,
+            }}
+          >
+            ${totalValue.toFixed(2)}
+          </Text>
 
+          {!isEmpty && (
             <View
               style={{
                 flexDirection: 'row',
@@ -238,127 +298,425 @@ export default function PortfolioScreen() {
                   color: '#ffffff',
                 }}
               >
-                +${totalGain.toLocaleString()} ({totalGainPercent}%)
+                +${totalGain.toFixed(2)} ({totalGainPercent}%)
               </Text>
             </View>
-          </View>
+          )}
         </View>
 
-        {/* Allocation Chart */}
-        <View
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 20,
-            borderWidth: 1,
-            borderColor: '#e5e7eb',
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: '600',
-              color: '#111827',
-              marginBottom: 16,
-            }}
-          >
-            Asset Allocation
-          </Text>
+        {isLoading ? (
           <View
             style={{
-              height: 240,
-              marginBottom: 16,
+              backgroundColor: '#ffffff',
+              borderRadius: 12,
+              padding: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 20,
+              borderWidth: 1,
+              borderColor: '#e5e7eb',
+              borderStyle: 'dashed',
             }}
           >
-            <PieChart data={pieData} />
+            <Wallet size={48} color="#d1d5db" style={{ marginBottom: 16 }} />
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: '700',
+                color: '#6b7280',
+                marginBottom: 8,
+                textAlign: 'center',
+              }}
+            >
+              Loading your portfolio
+            </Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: '#9ca3af',
+                textAlign: 'center',
+              }}
+            >
+              One moment while we refresh your holdings.
+            </Text>
           </View>
-
-          {/* Legend */}
-          <View style={{ gap: 12 }}>
-            {portfolioData.map((item, index) => (
-              <View
-                key={index}
+        ) : isEmpty ? (
+          <>
+            {/* Empty State */}
+            <View
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: 12,
+                padding: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 20,
+                borderWidth: 1,
+                borderColor: '#e5e7eb',
+                borderStyle: 'dashed',
+              }}
+            >
+              <Wallet size={48} color="#d1d5db" style={{ marginBottom: 16 }} />
+              <Text
                 style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  fontSize: 18,
+                  fontWeight: '700',
+                  color: '#6b7280',
+                  marginBottom: 8,
+                  textAlign: 'center',
                 }}
               >
+                Your portfolio is empty
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: '#9ca3af',
+                  marginBottom: 24,
+                  textAlign: 'center',
+                }}
+              >
+                Start by buying your first asset from the market
+              </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Home')}
+                style={{
+                  backgroundColor: '#2563eb',
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  paddingHorizontal: 24,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <Plus size={20} color="#ffffff" />
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: '#ffffff',
+                  }}
+                >
+                  Browse Assets
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Getting Started Section */}
+            <View
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: 12,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: '#e5e7eb',
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '700',
+                  color: '#111827',
+                  marginBottom: 16,
+                }}
+              >
+                How to Get Started
+              </Text>
+              {[
+                { num: '1', text: 'Go to Dashboard' },
+                { num: '2', text: 'Select an asset to view details' },
+                { num: '3', text: 'Click "Buy" to add to your portfolio' },
+                { num: '4', text: 'Track your investments here' },
+              ].map((step, index) => (
                 <View
+                  key={index}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 8,
-                    flex: 1,
+                    gap: 12,
+                    paddingVertical: 12,
+                    borderBottomWidth: index < 3 ? 1 : 0,
+                    borderBottomColor: '#f3f4f6',
                   }}
                 >
                   <View
                     style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: 3,
-                      backgroundColor: item.color,
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: '#dbeafe',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
-                  />
+                  >
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: '700',
+                        color: '#0284c7',
+                      }}
+                    >
+                      {step.num}
+                    </Text>
+                  </View>
                   <Text
                     style={{
-                      fontSize: 13,
+                      fontSize: 14,
                       color: '#4b5563',
                     }}
                   >
-                    {item.name}
+                    {step.text}
                   </Text>
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      fontWeight: '600',
-                      color: '#111827',
-                    }}
-                  >
-                    ${item.value.toLocaleString()}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: '#6b7280',
-                    }}
-                  >
-                    {item.percentage}%
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
+              ))}
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Holdings List */}
+            <View style={{ marginBottom: 20 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '700',
+                  color: '#111827',
+                  marginBottom: 12,
+                }}
+              >
+                Your Holdings
+              </Text>
+              {holdings.map((holding, index) => (
+                <HoldingCard key={index} holding={holding} />
+              ))}
+            </View>
 
-        {/* Holdings */}
+            {/* Action Button */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Home')}
+              style={{
+                backgroundColor: '#2563eb',
+                borderRadius: 8,
+                paddingVertical: 14,
+                alignItems: 'center',
+                marginBottom: 20,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <Plus size={20} color="#ffffff" />
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: '#ffffff',
+                  }}
+                >
+                  Buy More Assets
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </>
+        )}
+      </ScrollView>
+
+      {/* Sell Modal */}
+      <Modal
+        visible={sellModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setSellModalVisible(false)}
+      >
         <View
           style={{
-            backgroundColor: '#ffffff',
-            borderRadius: 12,
-            padding: 16,
-            borderWidth: 1,
-            borderColor: '#e5e7eb',
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'flex-end',
           }}
         >
-          <Text
+          <View
             style={{
-              fontSize: 14,
-              fontWeight: '600',
-              color: '#111827',
-              marginBottom: 12,
+              backgroundColor: '#ffffff',
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
+              maxHeight: '80%',
             }}
           >
-            Your Holdings
-          </Text>
-          {holdings.map((holding, index) => (
-            <HoldingCard key={index} holding={holding} />
-          ))}
+            {/* Header */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 20,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: '700',
+                  color: '#111827',
+                }}
+              >
+                Sell {selectedForSell?.symbol}
+              </Text>
+              <TouchableOpacity onPress={() => setSellModalVisible(false)}>
+                <X size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Available Amount */}
+            <View
+              style={{
+                backgroundColor: '#f3f4f6',
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 20,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: '#6b7280',
+                  marginBottom: 4,
+                }}
+              >
+                Available to Sell
+              </Text>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: '700',
+                  color: '#111827',
+                }}
+              >
+                {selectedForSell?.amount.toFixed(4)} {selectedForSell?.symbol}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: '#9ca3af',
+                  marginTop: 4,
+                }}
+              >
+                Current Price: ${selectedForSell?.price.toFixed(2)}
+              </Text>
+            </View>
+
+            {/* Amount Input */}
+            <View style={{ marginBottom: 20 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '600',
+                  color: '#111827',
+                  marginBottom: 8,
+                }}
+              >
+                Amount to Sell
+              </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 12,
+                  fontSize: 16,
+                  color: '#111827',
+                }}
+                placeholder="Enter amount"
+                placeholderTextColor="#9ca3af"
+                keyboardType="decimal-pad"
+                value={sellAmount}
+                onChangeText={setSellAmount}
+              />
+            </View>
+
+            {/* Projected Proceeds */}
+            {sellAmount && (
+              <View
+                style={{
+                  backgroundColor: '#dcfce7',
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 20,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: '#166534',
+                    marginBottom: 4,
+                  }}
+                >
+                  You will receive
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 20,
+                    fontWeight: '700',
+                    color: '#166534',
+                  }}
+                >
+                  ${((parseFloat(sellAmount) || 0) * (selectedForSell?.price || 0)).toFixed(2)}
+                </Text>
+              </View>
+            )}
+
+            {/* Action Buttons */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => setSellModalVisible(false)}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f3f4f6',
+                  borderRadius: 8,
+                  paddingVertical: 14,
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: '#6b7280',
+                  }}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleConfirmSell}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#dc2626',
+                  borderRadius: 8,
+                  paddingVertical: 14,
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: '#ffffff',
+                  }}
+                >
+                  Confirm Sell
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </ScrollView>
+      </Modal>
     </View>
   );
 }

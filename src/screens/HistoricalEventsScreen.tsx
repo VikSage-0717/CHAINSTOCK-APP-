@@ -243,7 +243,7 @@ export default function HistoricalEventsScreen() {
             marginBottom: 16,
           }}
         >
-          Learn how major events shaped markets since WWI
+          Learn how major events shaped markets since the first public listings in 1602
         </Text>
 
         {/* Filter Buttons */}

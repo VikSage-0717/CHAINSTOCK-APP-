@@ -1,3 +1,5 @@
+import { getMarketEvents } from './marketEvents';
+
 export interface Asset {
   symbol: string;
   name: string;
@@ -6,6 +8,7 @@ export interface Asset {
   changePercent: number;
   type: 'stock' | 'crypto';
 }
+
 
 export interface Prediction {
   symbol: string;
@@ -107,85 +110,18 @@ export const generateChartData = (price: number, changePercent: number, days: nu
   return data;
 };
 
+
 export const getHistoricalEvents = (): HistoricalEvent[] => {
-  return [
-    {
-      year: 1914,
-      event: 'World War I Begins',
-      description: 'The outbreak of WWI caused major stock exchanges to close for months.',
-      marketImpact: 'Markets crashed globally. Dow Jones fell 30% before closure.',
-      impactType: 'negative',
-      percentChange: -30,
-    },
-    {
-      year: 1929,
-      event: 'The Great Depression',
-      description: 'Black Tuesday marked the worst stock market crash in history.',
-      marketImpact: 'Dow Jones lost 89% of its value from peak to trough by 1932.',
-      impactType: 'negative',
-      percentChange: -89,
-    },
-    {
-      year: 1973,
-      event: 'Oil Crisis',
-      description: 'OPEC oil embargo caused oil prices to quadruple.',
-      marketImpact: 'S&P 500 fell 48% from peak. Inflation reached double digits.',
-      impactType: 'negative',
-      percentChange: -48,
-    },
-    {
-      year: 1987,
-      event: 'Black Monday',
-      description: 'Largest single-day stock market crash in history.',
-      marketImpact: 'Global market panic. Dow Jones fell 22.6% in one day.',
-      impactType: 'negative',
-      percentChange: -22.6,
-    },
-    {
-      year: 2000,
-      event: 'Dot-com Bubble Burst',
-      description: 'Technology stock bubble popped, wiping out trillions.',
-      marketImpact: 'NASDAQ fell 78% from peak. Tech stocks devastated.',
-      impactType: 'negative',
-      percentChange: -78,
-    },
-    {
-      year: 2008,
-      event: 'Global Financial Crisis',
-      description: 'Housing bubble collapse and Lehman Brothers bankruptcy.',
-      marketImpact: 'S&P 500 dropped 57%. Global credit freeze.',
-      impactType: 'negative',
-      percentChange: -57,
-    },
-    {
-      year: 2009,
-      event: 'Bitcoin Launch',
-      description: 'Satoshi Nakamoto launched Bitcoin, creating the first cryptocurrency.',
-      marketImpact: 'Birth of crypto market. Now a trillion-dollar asset class.',
-      impactType: 'positive',
-    },
-    {
-      year: 2020,
-      event: 'COVID-19 Pandemic',
-      description: 'Global pandemic caused fastest market crash, followed by recovery.',
-      marketImpact: '34% S&P crash in weeks, then historic bull run.',
-      impactType: 'mixed',
-      percentChange: -34,
-    },
-    {
-      year: 2021,
-      event: 'Crypto Bull Run',
-      description: 'Bitcoin reached all-time high. NFT mania and DeFi explosion.',
-      marketImpact: 'Crypto market cap exceeded $3 trillion.',
-      impactType: 'positive',
-      percentChange: 300,
-    },
-    {
-      year: 2024,
-      event: 'AI Revolution',
-      description: 'AI and machine learning breakthroughs drive market growth.',
-      marketImpact: 'Tech stocks surge. AI companies become market leaders.',
-      impactType: 'positive',
-    },
-  ];
+  // Use verified market events
+  const marketEvents = getMarketEvents();
+  
+  return marketEvents.map(event => ({
+    year: event.year,
+    event: event.event,
+    description: event.description,
+    marketImpact: event.marketImpact,
+    impactType: event.impactType,
+    percentChange: event.priceImpact,
+  }));
 };
+
