@@ -106,10 +106,9 @@ export default function PredictionsScreen() {
   const PredictionCard = ({ item }: { item: PredictionItem }) => {
     const trendColor = getTrendColor(item.trend);
     const trendBgColor = getTrendBgColor(item.trend);
-    const percentDiff = (
-      ((item.predictedPrice - item.currentPrice) / item.currentPrice) *
-      100
-    ).toFixed(2);
+    const percentDiff = item.currentPrice
+      ? (((item.predictedPrice - item.currentPrice) / item.currentPrice) * 100).toFixed(2)
+      : '0.00';
 
     return (
       <View
@@ -149,16 +148,12 @@ export default function PredictionsScreen() {
             >
               {item.name}
             </Text>
-            {item.sentimentScore !== undefined && (
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: '#9ca3af',
-                  marginTop: 4,
-                }}
-              >
+            {item.sentimentScore != null ? (
+              <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
                 Sentiment: {item.sentimentScore}% {item.sentimentScore > 60 ? '📈' : item.sentimentScore < 40 ? '📉' : '➡️'}
               </Text>
+            ) : (
+              <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Sentiment: Insufficient data</Text>
             )}
           </View>
           <View

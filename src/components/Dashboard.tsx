@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import MarketCard from './MarketCard';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { RefreshCw, Search } from 'lucide-react';
+import { getDashboardAssets, getAssetPrediction } from '../utils/api';
 
 interface Asset {
   symbol: string;
@@ -16,6 +17,7 @@ export default function Dashboard({ onAssetClick }: { onAssetClick: (asset: Asse
   const [assets, setAssets] = useState<Asset[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [devRunning, setDevRunning] = useState(false);
 
   // Mock market data - In production, replace with real API calls
   const generateMockData = (): Asset[] => {
@@ -80,14 +82,50 @@ export default function Dashboard({ onAssetClick }: { onAssetClick: (asset: Asse
             <h1 className="text-3xl font-bold text-gray-900">ChainStock</h1>
             <p className="text-sm text-gray-500">Real-time Market Analysis</p>
           </div>
-          <button
-            onClick={handleRefresh}
-            className={`p-3 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform ${
-              isRefreshing ? 'animate-spin' : ''
-            }`}
-          >
-            <RefreshCw size={20} />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRefresh}
+              className={`p-3 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform ${
+                isRefreshing ? 'animate-spin' : ''
+              }`}
+            >
+              <RefreshCw size={20} />
+            </button>
+
+            {/* Dev run button (visible on localhost or in development) */}
+            {((typeof process !== 'undefined' && process?.env?.NODE_ENV === 'development') || (typeof window !== 'undefined' && (window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.href.indexOf('dev=1') !== -1)))) && (
+              <button
+                onClick={async () => {
+                  try {
+                    setDevRunning(true);
+                    console.log('Dev: fetching dashboard assets...');
+                    const assets = await getDashboardAssets();
+                    console.log('Dev assets:', assets?.map(a => a.symbol));
+                    const targets = (assets || []).slice(0, 8);
+                    for (const t of targets) {
+                      try {
+                        console.log(`Dev: requesting prediction for ${t.symbol}`);
+                        const pred = await getAssetPrediction(t.symbol);
+                        console.log('Dev prediction:', t.symbol, pred);
+                      } catch (err) {
+                        console.error('Dev prediction error for', t.symbol, err);
+                      }
+                    }
+                    alert('Dev predictions complete — check console logs.');
+                  } catch (err) {
+                    console.error('Dev run failed', err);
+                    alert('Dev run failed: ' + (err as any)?.message || String(err));
+                  } finally {
+                    setDevRunning(false);
+                  }
+                }}
+                disabled={devRunning}
+                className="px-3 py-2 bg-gray-100 text-gray-800 rounded-lg border border-gray-200 text-sm"
+              >
+                {devRunning ? 'Running...' : 'Dev: Run Predictions'}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Search */}

@@ -7,12 +7,13 @@ import {
   Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft } from 'lucide-react-native';
 import {
   VictoryChart,
   VictoryLine,
   VictoryTheme,
   VictoryAxis,
+  VictoryArea,
+  VictoryVoronoiContainer,
 } from 'victory-native';
 import { Asset } from '../utils/mockData';
 import { getAssetHistory, getAssetNews } from '../utils/api';
@@ -34,6 +35,8 @@ export default function AssetDetailScreen() {
   const [news, setNews] = React.useState<any[]>([]);
   const [overallSentiment, setOverallSentiment] = React.useState('');
   const [isBuying, setIsBuying] = React.useState(false);
+  const [smoothingWindow, setSmoothingWindow] = React.useState<number>(3);
+  const [smoothingIterations, setSmoothingIterations] = React.useState<number>(1);
 
   const handleBuy = async () => {
     setIsBuying(true);
@@ -67,6 +70,63 @@ export default function AssetDetailScreen() {
     loadData();
   }, [asset.symbol]);
 
+  // Smooth the price series for a cleaner chart (moving average)
+  const smoothPrices = (prices: number[], windowSize = 5, iterations = 2) => {
+    if (!prices || prices.length === 0) return [];
+    let sm = prices.slice();
+    for (let it = 0; it < iterations; it++) {
+      const prev = sm.slice();
+      for (let i = 0; i < prev.length; i++) {
+        const half = Math.floor(windowSize / 2);
+        const start = Math.max(0, i - half);
+        const end = Math.min(prev.length - 1, i + half);
+        let sum = 0;
+        let count = 0;
+        for (let j = start; j <= end; j++) {
+          sum += prev[j];
+          count++;
+        }
+        sm[i] = sum / count;
+      }
+    }
+    return sm;
+  };
+
+  const { victoryData, victoryDomain } = React.useMemo(() => {
+    if (!chartData || chartData.length === 0) return { victoryData: [], victoryDomain: undefined };
+    const prices = chartData.map((c) => c.price);
+    const smoothed = smoothPrices(prices, smoothingWindow, smoothingIterations);
+    const data = smoothed.map((p, i) => ({ x: new Date(chartData[i].date), y: Math.round(p * 100) / 100 }));
+
+    // Compute Y domain with padding; if flat, expand slightly so variations are visible
+    const ys = data.map(d => d.y);
+    let minY = Math.min(...ys);
+    let maxY = Math.max(...ys);
+    if (!isFinite(minY) || !isFinite(maxY)) {
+      return { victoryData: data, victoryDomain: undefined };
+    }
+    if (Math.abs(maxY - minY) < 1e-6) {
+      // nearly flat - expand by 0.5% or at least 1 unit for small prices
+      const delta = Math.max(Math.abs(minY) * 0.005, 1);
+      minY = minY - delta;
+      maxY = maxY + delta;
+    } else {
+      const pad = (maxY - minY) * 0.08;
+      minY -= pad;
+      maxY += pad;
+    }
+
+    return { victoryData: data, victoryDomain: { y: [minY, maxY] } };
+  }, [chartData, smoothingWindow, smoothingIterations]);
+
+  React.useEffect(() => {
+    try {
+      if (victoryData && victoryData.length > 0) {
+        console.debug && console.debug('AssetDetail:victoryData', asset.symbol, victoryData.map(d => d.y));
+      }
+    } catch (e) {}
+  }, [victoryData]);
+
   const stats = [
     { label: '24h High', value: `$${(asset.price * 1.05).toFixed(2)}` },
     { label: '24h Low', value: `$${(asset.price * 0.95).toFixed(2)}` },
@@ -96,7 +156,7 @@ export default function AssetDetailScreen() {
             gap: 8,
           }}
         >
-          <ArrowLeft size={24} color="#374151" />
+          <Text style={{ fontSize: 20, color: '#374151' }}>←</Text>
           <Text
             style={{
               fontSize: 16,
@@ -216,42 +276,68 @@ export default function AssetDetailScreen() {
         </View>
 
         {/* Chart */}
-        <View
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 20,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: '600',
-              color: '#111827',
-              marginBottom: 12,
-            }}
-          >
-            30-Day Performance
-          </Text>
+        <View style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 12 }}>30-Day Performance</Text>
 
-          <VictoryChart theme={VictoryTheme.material}>
-            <VictoryAxis dependentAxis />
-            <VictoryAxis />
+          {/* Smoothing Controls */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Smoothing window: {smoothingWindow}</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {[3,5,7].map(w => (
+                  <TouchableOpacity key={w} onPress={() => setSmoothingWindow(w)} style={{ padding: 6, backgroundColor: smoothingWindow===w? '#2563eb' : '#f3f4f6', borderRadius: 6 }}>
+                    <Text style={{ color: smoothingWindow===w? '#fff' : '#374151', fontWeight: '600' }}>{w}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={{ width: 140 }}>
+              <Text style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Iterations: {smoothingIterations}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                {[1,2,3].map(it => (
+                  <TouchableOpacity key={it} onPress={() => setSmoothingIterations(it)} style={{ padding: 6, backgroundColor: smoothingIterations===it? '#2563eb' : '#f3f4f6', borderRadius: 6 }}>
+                    <Text style={{ color: smoothingIterations===it? '#fff' : '#374151', fontWeight: '600' }}>{it}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
 
-            <VictoryLine
-              data={chartData.map((item, index) => ({
-                x: index,
-                y: item.price,
-              }))}
-              style={{
-                data: {
-                  stroke: isPositive ? '#10b981' : '#ef4444',
-                  strokeWidth: 2,
-                },
-              }}
-            />
-          </VictoryChart>
+          {victoryData.length > 0 ? (
+            <VictoryChart
+              theme={VictoryTheme.material}
+              scale={{ x: 'time' }}
+              domain={victoryDomain}
+              width={Math.max(300, SCREEN_WIDTH - 32)}
+              height={220}
+              containerComponent={<VictoryVoronoiContainer labels={({ datum }) => `${new Date(datum.x).toLocaleDateString()}\n$${datum.y}`} />}
+            >
+              <VictoryAxis
+                dependentAxis
+                style={{
+                  grid: { stroke: '#f3f4f6' },
+                  axis: { stroke: '#e5e7eb' },
+                  tickLabels: { fontSize: 10, padding: 6, fill: '#6b7280' },
+                }}
+              />
+
+              <VictoryAxis
+                tickValues={victoryData.filter((_, i) => i % Math.max(1, Math.floor(victoryData.length / 5)) === 0).map(d => d.x)}
+                tickFormat={(t) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                style={{ tickLabels: { fontSize: 10, padding: 6, fill: '#6b7280' }, axis: { stroke: '#e5e7eb' } }}
+              />
+
+              <VictoryArea data={victoryData} interpolation="monotoneX" style={{ data: { fill: isPositive ? '#10b98122' : '#ef444422' } }} />
+
+              <VictoryLine
+                data={victoryData}
+                interpolation="monotoneX"
+                style={{ data: { stroke: isPositive ? '#10b981' : '#ef4444', strokeWidth: 3 } }}
+              />
+            </VictoryChart>
+          ) : (
+            <Text style={{ fontSize: 12, color: '#6b7280' }}>No chart data</Text>
+          )}
         </View>
 
         {/* News Section */}
