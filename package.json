@@ -7,11 +7,14 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build:web": "expo export --platform web",
     "eject": "expo eject"
   },
   "dependencies": {
     "@expo/metro-runtime": "~56.0.13",
     "@expo/server": "^0.7.5",
+    "@expo/webpack-config": "^19.0.1",
     "@react-native-async-storage/async-storage": "^1.21.0",
     "@react-native-community/slider": "^4.3.0",
     "@react-navigation/bottom-tabs": "^6.5.20",
