@@ -569,7 +569,7 @@ export const getAssetNews = async (ticker: string) => {
   }
 };
 
-export const getAssetPrediction = async (ticker: string) => {
+export const getAssetPrediction = async (ticker: string, rangeYears: number = 1) => {
   try {
     // Prefer actual current price from getAssetDetails to keep UI consistent
     const assetDetails = await getAssetDetails(ticker);
@@ -663,50 +663,63 @@ export const getAssetPrediction = async (ticker: string) => {
     const hasSentiment = typeof avgSentiment === 'number' && !isNaN(avgSentiment);
 
     // Sentiment-based predictions: positive sentiment -> bullish prediction
-    const timeframeConfig = {
-      // Tighter short-term bounds to avoid unrealistic 24h swings
-      '24h': { volatility: 0.004, sentimentWeight: 0.12, clamp: 0.02, trendThreshold: 0.01 },
-      '7d': { volatility: 0.015, sentimentWeight: 0.25, clamp: 0.08, trendThreshold: 0.03 },
-      '30d': { volatility: 0.04, sentimentWeight: 0.45, clamp: 0.2, trendThreshold: 0.06 },
-    };
-
-    const predictions = Object.entries(timeframeConfig).map(([timeframe, config]: any) => {
-      const sentimentShift = hasSentiment ? (avgSentiment! - 0.5) * config.sentimentWeight : 0;
-      const randomShift = (Math.random() - 0.5) * config.volatility;
-      let totalShift = sentimentShift + randomShift;
-
-      // Clamp extreme shifts (especially for short timeframes)
-      const maxClamp = config.clamp;
-      if (totalShift > maxClamp) totalShift = maxClamp;
-      if (totalShift < -maxClamp) totalShift = -maxClamp;
-
-      const predictedPrice = currentPrice * (1 + totalShift);
-
-      // Confidence: depends on amount of recent news (weightSum) and sentiment magnitude
-      let confidenceBase = 50;
-      if (hasSentiment) {
-        // sentiment magnitude contributes up to 40 points
-        confidenceBase += Math.min(40, Math.abs(avgSentiment! - 0.5) * 80);
+    const rangeConfig = (() => {
+      if (rangeYears <= 1) {
+        return { label: '1Y', volatility: 0.006, sentimentWeight: 0.12, clamp: 0.03, trendThreshold: 0.015 };
       }
-      // Give a small random uplift
-      const confidence = Math.min(95, Math.max(30, Math.round(confidenceBase + Math.random() * 10)));
+      if (rangeYears <= 3) {
+        return { label: '3Y', volatility: 0.015, sentimentWeight: 0.20, clamp: 0.07, trendThreshold: 0.03 };
+      }
+      if (rangeYears <= 5) {
+        return { label: '5Y', volatility: 0.025, sentimentWeight: 0.28, clamp: 0.12, trendThreshold: 0.05 };
+      }
+      if (rangeYears <= 7) {
+        return { label: '7Y', volatility: 0.035, sentimentWeight: 0.36, clamp: 0.18, trendThreshold: 0.07 };
+      }
+      return { label: '10Y', volatility: 0.055, sentimentWeight: 0.48, clamp: 0.26, trendThreshold: 0.09 };
+    })();
 
-      let trend: 'bullish' | 'bearish' | 'neutral';
-      if (predictedPrice > currentPrice * (1 + config.trendThreshold)) trend = 'bullish';
-      else if (predictedPrice < currentPrice * (1 - config.trendThreshold)) trend = 'bearish';
-      else trend = 'neutral';
+    const config = rangeConfig;
+    const sentimentShift = hasSentiment ? (avgSentiment! - 0.5) * config.sentimentWeight : 0;
+    const randomShift = (Math.random() - 0.5) * config.volatility;
+    let totalShift = sentimentShift + randomShift;
 
-      return {
-        timeframe,
+    // Clamp extreme shifts for the selected horizon
+    const maxClamp = config.clamp;
+    if (totalShift > maxClamp) totalShift = maxClamp;
+    if (totalShift < -maxClamp) totalShift = -maxClamp;
+
+    // Add a small deterministic, ticker- and horizon-dependent shift so
+    // moving the horizon produces visible per-stock differences even
+    // when randomness is small. This keeps behavior stable but responsive.
+    const tickerSeed = String(ticker).split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+    const seedShift = (((tickerSeed % 100) - 50) / 10000) * rangeYears; // ~±0.005 * years max
+    const predictedPrice = currentPrice * (1 + totalShift + seedShift);
+
+    // Confidence: depends on amount of recent news and sentiment magnitude
+    let confidenceBase = 50;
+    if (hasSentiment) {
+      confidenceBase += Math.min(40, Math.abs(avgSentiment! - 0.5) * 80);
+    }
+    const confidence = Math.min(95, Math.max(30, Math.round(confidenceBase + Math.random() * 10)));
+
+    let trend: 'bullish' | 'bearish' | 'neutral';
+    if (predictedPrice > currentPrice * (1 + config.trendThreshold)) trend = 'bullish';
+    else if (predictedPrice < currentPrice * (1 - config.trendThreshold)) trend = 'bearish';
+    else trend = 'neutral';
+
+    const predictions = [
+      {
+        timeframe: config.label,
         predictedPrice: Math.round(predictedPrice * 100) / 100,
         confidence: Math.round(confidence),
         trend,
-      };
-    });
+      },
+    ];
 
     // Debug final prediction output
     try {
-      console.debug && console.debug('getAssetPrediction.final', ticker, { avgSentiment, predictions });
+      console.debug && console.debug('getAssetPrediction.final', ticker, { avgSentiment, rangeYears, seedShift, predictions });
     } catch (e) {}
 
     return {

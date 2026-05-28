@@ -1,61 +1,67 @@
-"use client";
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 
-import * as React from "react";
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+interface TooltipContextType {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
 
-import { cn } from "./utils";
+const TooltipContext = React.createContext<TooltipContextType | undefined>(undefined);
 
-function TooltipProvider({
-  delayDuration = 0,
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
+function Tooltip({ children }: { children?: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
   return (
-    <TooltipPrimitive.Provider
-      data-slot="tooltip-provider"
-      delayDuration={delayDuration}
-      {...props}
-    />
+    <TooltipContext.Provider value={{ open, setOpen }}>
+      <View>{children}</View>
+    </TooltipContext.Provider>
   );
 }
 
-function Tooltip({
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
+function TooltipTrigger({ children }: { children?: React.ReactNode }) {
+  const ctx = React.useContext(TooltipContext);
+  if (!ctx) return <>{children}</>;
   return (
-    <TooltipProvider>
-      <TooltipPrimitive.Root data-slot="tooltip" {...props} />
-    </TooltipProvider>
+    <TouchableOpacity
+      onPress={() => ctx.setOpen(true)}
+      activeOpacity={0.8}
+    >
+      {children}
+    </TouchableOpacity>
   );
 }
 
-function TooltipTrigger({
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
-}
-
-function TooltipContent({
-  className,
-  sideOffset = 0,
-  children,
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+function TooltipContent({ children }: { children?: React.ReactNode }) {
+  const ctx = React.useContext(TooltipContext);
+  if (!ctx) return null;
   return (
-    <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Content
-        data-slot="tooltip-content"
-        sideOffset={sideOffset}
-        className={cn(
-          "bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md px-3 py-1.5 text-xs text-balance",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-        <TooltipPrimitive.Arrow className="bg-primary fill-primary z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
-      </TooltipPrimitive.Content>
-    </TooltipPrimitive.Portal>
+    <Modal transparent visible={ctx.open} animationType="fade" onRequestClose={() => ctx.setOpen(false)}>
+      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => ctx.setOpen(false)}>
+        <View style={styles.content}>
+          <Text style={styles.text}>{children as string}</Text>
+        </View>
+      </TouchableOpacity>
+    </Modal>
   );
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  content: {
+    backgroundColor: '#111827',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    maxWidth: '80%',
+  },
+  text: {
+    color: '#fff',
+    fontSize: 12,
+  },
+});
+
+export { Tooltip, TooltipTrigger, TooltipContent };

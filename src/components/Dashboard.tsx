@@ -1,8 +1,32 @@
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
+  Dimensions,
+  Alert,
+} from 'react-native';
+
+import {
+  RefreshCw,
+  Search,
+} from 'lucide-react-native';
+
+import {
+  LineChart,
+} from 'react-native-chart-kit';
+
 import MarketCard from './MarketCard';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { RefreshCw, Search } from 'lucide-react';
-import { getDashboardAssets, getAssetPrediction } from '../utils/api';
+import {
+  getDashboardAssets,
+  getAssetPrediction,
+} from '../utils/api';
+
+const screenWidth = Dimensions.get('window').width;
 
 interface Asset {
   symbol: string;
@@ -13,34 +37,91 @@ interface Asset {
   type: 'stock' | 'crypto';
 }
 
-export default function Dashboard({ onAssetClick }: { onAssetClick: (asset: Asset) => void }) {
+interface Props {
+  onAssetClick: (asset: Asset) => void;
+}
+
+export default function Dashboard({
+  onAssetClick,
+}: Props) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [devRunning, setDevRunning] = useState(false);
 
-  // Mock market data - In production, replace with real API calls
+  // Generate mock assets
   const generateMockData = (): Asset[] => {
     const baseAssets = [
-      { symbol: 'BTC', name: 'Bitcoin', base: 67000, type: 'crypto' as const },
-      { symbol: 'ETH', name: 'Ethereum', base: 3200, type: 'crypto' as const },
-      { symbol: 'AAPL', name: 'Apple Inc.', base: 178, type: 'stock' as const },
-      { symbol: 'GOOGL', name: 'Alphabet Inc.', base: 142, type: 'stock' as const },
-      { symbol: 'TSLA', name: 'Tesla Inc.', base: 248, type: 'stock' as const },
-      { symbol: 'MSFT', name: 'Microsoft Corp.', base: 418, type: 'stock' as const },
-      { symbol: 'SOL', name: 'Solana', base: 145, type: 'crypto' as const },
-      { symbol: 'AMZN', name: 'Amazon.com Inc.', base: 186, type: 'stock' as const },
+      {
+        symbol: 'BTC',
+        name: 'Bitcoin',
+        base: 67000,
+        type: 'crypto' as const,
+      },
+      {
+        symbol: 'ETH',
+        name: 'Ethereum',
+        base: 3200,
+        type: 'crypto' as const,
+      },
+      {
+        symbol: 'AAPL',
+        name: 'Apple Inc.',
+        base: 178,
+        type: 'stock' as const,
+      },
+      {
+        symbol: 'GOOGL',
+        name: 'Alphabet Inc.',
+        base: 142,
+        type: 'stock' as const,
+      },
+      {
+        symbol: 'TSLA',
+        name: 'Tesla Inc.',
+        base: 248,
+        type: 'stock' as const,
+      },
+      {
+        symbol: 'MSFT',
+        name: 'Microsoft Corp.',
+        base: 418,
+        type: 'stock' as const,
+      },
+      {
+        symbol: 'SOL',
+        name: 'Solana',
+        base: 145,
+        type: 'crypto' as const,
+      },
+      {
+        symbol: 'AMZN',
+        name: 'Amazon.com Inc.',
+        base: 186,
+        type: 'stock' as const,
+      },
     ];
 
-    return baseAssets.map(asset => {
-      const randomChange = (Math.random() - 0.5) * 10;
+    return baseAssets.map((asset) => {
+      const randomChange =
+        (Math.random() - 0.5) * 10;
+
       const changePercent = randomChange;
-      const price = asset.base * (1 + changePercent / 100);
+
+      const price =
+        asset.base * (1 + changePercent / 100);
+
       return {
-        ...asset,
-        price,
-        change: price - asset.base,
-        changePercent,
+        symbol: asset.symbol,
+        name: asset.name,
+        type: asset.type,
+        price: Number(price.toFixed(2)),
+        change: Number(
+          (price - asset.base).toFixed(2)
+        ),
+        changePercent: Number(
+          changePercent.toFixed(2)
+        ),
       };
     });
   };
@@ -48,7 +129,6 @@ export default function Dashboard({ onAssetClick }: { onAssetClick: (asset: Asse
   useEffect(() => {
     setAssets(generateMockData());
 
-    // Simulate live updates every 5 seconds
     const interval = setInterval(() => {
       setAssets(generateMockData());
     }, 5000);
@@ -58,115 +138,295 @@ export default function Dashboard({ onAssetClick }: { onAssetClick: (asset: Asse
 
   const handleRefresh = () => {
     setIsRefreshing(true);
+
     setAssets(generateMockData());
-    setTimeout(() => setIsRefreshing(false), 500);
+
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 700);
   };
 
-  const filteredAssets = assets.filter(asset =>
-    asset.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    asset.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const runDevPredictions = async () => {
+    try {
+      setDevRunning(true);
+
+      const apiAssets =
+        await getDashboardAssets();
+
+      const targets =
+        (apiAssets || []).slice(0, 5);
+
+      for (const t of targets) {
+        try {
+          const pred =
+            await getAssetPrediction(t.symbol);
+
+          console.log(
+            'Prediction:',
+            t.symbol,
+            pred
+          );
+        } catch (err) {
+          console.log(err);
+        }
+      }
+
+      Alert.alert(
+        'Success',
+        'Predictions completed'
+      );
+    } catch (err: any) {
+      Alert.alert(
+        'Error',
+        err?.message || 'Something went wrong'
+      );
+    } finally {
+      setDevRunning(false);
+    }
+  };
+
+  const filteredAssets = assets.filter(
+    (asset) =>
+      asset.symbol
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      asset.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
   );
 
-  // Mock chart data
-  const chartData = Array.from({ length: 24 }, (_, i) => ({
-    time: `${i}:00`,
-    value: 65000 + Math.random() * 4000,
-  }));
+  // Chart values
+  const chartValues = Array.from(
+    { length: 12 },
+    () => 65000 + Math.random() * 4000
+  );
 
   return (
-    <div className="pb-20 pt-4 px-4">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">ChainStock</h1>
-            <p className="text-sm text-gray-500">Real-time Market Analysis</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleRefresh}
-              className={`p-3 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform ${
-                isRefreshing ? 'animate-spin' : ''
-              }`}
-            >
-              <RefreshCw size={20} />
-            </button>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* HEADER */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>
+            ChainStock
+          </Text>
 
-            {/* Dev run button (visible on localhost or in development) */}
-            {((typeof process !== 'undefined' && process?.env?.NODE_ENV === 'development') || (typeof window !== 'undefined' && (window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.href.indexOf('dev=1') !== -1)))) && (
-              <button
-                onClick={async () => {
-                  try {
-                    setDevRunning(true);
-                    console.log('Dev: fetching dashboard assets...');
-                    const assets = await getDashboardAssets();
-                    console.log('Dev assets:', assets?.map(a => a.symbol));
-                    const targets = (assets || []).slice(0, 8);
-                    for (const t of targets) {
-                      try {
-                        console.log(`Dev: requesting prediction for ${t.symbol}`);
-                        const pred = await getAssetPrediction(t.symbol);
-                        console.log('Dev prediction:', t.symbol, pred);
-                      } catch (err) {
-                        console.error('Dev prediction error for', t.symbol, err);
-                      }
-                    }
-                    alert('Dev predictions complete — check console logs.');
-                  } catch (err) {
-                    console.error('Dev run failed', err);
-                    alert('Dev run failed: ' + (err as any)?.message || String(err));
-                  } finally {
-                    setDevRunning(false);
-                  }
-                }}
-                disabled={devRunning}
-                className="px-3 py-2 bg-gray-100 text-gray-800 rounded-lg border border-gray-200 text-sm"
-              >
-                {devRunning ? 'Running...' : 'Dev: Run Predictions'}
-              </button>
+          <Text style={styles.subtitle}>
+            Real-time Market Analysis
+          </Text>
+        </View>
+
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={handleRefresh}
+          >
+            {isRefreshing ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <RefreshCw
+                size={20}
+                color="#fff"
+              />
             )}
-          </div>
-        </div>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search stocks or crypto..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
+      {/* SEARCH */}
+      <View style={styles.searchContainer}>
+        <Search
+          size={20}
+          color="#9ca3af"
+          style={styles.searchIcon}
+        />
 
-      {/* Market Overview Chart */}
-      <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl p-4 mb-6 shadow-lg">
-        <h3 className="text-white font-semibold mb-2">Market Overview (24h)</h3>
-        <ResponsiveContainer width="100%" height={150}>
-          <LineChart data={chartData}>
-            <XAxis dataKey="time" stroke="#fff" opacity={0.5} tick={{ fontSize: 10 }} />
-            <YAxis stroke="#fff" opacity={0.5} tick={{ fontSize: 10 }} />
-            <Tooltip
-              contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
-            />
-            <Line type="monotone" dataKey="value" stroke="#fff" strokeWidth={2} dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+        <TextInput
+          placeholder="Search stocks or crypto..."
+          placeholderTextColor="#9ca3af"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          style={styles.searchInput}
+        />
+      </View>
 
-      {/* Market Cards */}
-      <div className="space-y-3">
-        <h2 className="font-semibold text-gray-900">Trending Assets</h2>
+      {/* DEV BUTTON */}
+      <TouchableOpacity
+        style={styles.devButton}
+        onPress={runDevPredictions}
+        disabled={devRunning}
+      >
+        <Text style={styles.devButtonText}>
+          {devRunning
+            ? 'Running Predictions...'
+            : 'Dev: Run Predictions'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* CHART */}
+      <View style={styles.chartCard}>
+        <Text style={styles.chartTitle}>
+          Market Overview (24h)
+        </Text>
+
+        <LineChart
+          data={{
+            labels: [
+              '1',
+              '2',
+              '3',
+              '4',
+              '5',
+              '6',
+            ],
+            datasets: [
+              {
+                data: chartValues,
+              },
+            ],
+          }}
+          width={screenWidth - 40}
+          height={220}
+          withDots={false}
+          withInnerLines={false}
+          withOuterLines={false}
+          withVerticalLines={false}
+          withHorizontalLines={false}
+          bezier
+          chartConfig={{
+            backgroundGradientFrom: '#2563eb',
+            backgroundGradientTo: '#7c3aed',
+            decimalPlaces: 0,
+
+            color: (opacity = 1) =>
+              `rgba(255,255,255,${opacity})`,
+
+            labelColor: (opacity = 1) =>
+              `rgba(255,255,255,${opacity})`,
+          }}
+          style={styles.chart}
+        />
+      </View>
+
+      {/* ASSETS */}
+      <View style={styles.assetsContainer}>
+        <Text style={styles.assetsTitle}>
+          Trending Assets
+        </Text>
+
         {filteredAssets.map((asset) => (
           <MarketCard
             key={asset.symbol}
             {...asset}
-            onClick={() => onAssetClick(asset)}
+            onClick={() =>
+              onAssetClick(asset)
+            }
           />
         ))}
-      </div>
-    </div>
+      </View>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
+
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+
+  title: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+
+  subtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+
+  headerButtons: {
+    flexDirection: 'row',
+  },
+
+  refreshButton: {
+    backgroundColor: '#2563eb',
+    padding: 12,
+    borderRadius: 50,
+  },
+
+  searchContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+
+  searchIcon: {
+    marginRight: 8,
+  },
+
+  searchInput: {
+    flex: 1,
+    height: 50,
+    fontSize: 16,
+    color: '#111827',
+  },
+
+  devButton: {
+    backgroundColor: '#111827',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+
+  devButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+
+  chartCard: {
+    backgroundColor: '#2563eb',
+    borderRadius: 20,
+    paddingTop: 16,
+    marginBottom: 24,
+    overflow: 'hidden',
+  },
+
+  chartTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    paddingHorizontal: 16,
+  },
+
+  chart: {
+    borderRadius: 20,
+  },
+
+  assetsContainer: {
+    paddingBottom: 40,
+  },
+
+  assetsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 14,
+  },
+});

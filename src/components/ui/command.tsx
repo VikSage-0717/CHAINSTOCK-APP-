@@ -1,168 +1,178 @@
-"use client";
-
-import * as React from "react";
-import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon } from "lucide-react";
-
-import { cn } from "./utils";
+import React, { useState } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "./dialog";
+  View,
+  TouchableOpacity,
+  TextInput,
+  FlatList,
+  Text,
+  StyleSheet,
+  Modal,
+} from 'react-native';
+import { Search } from 'lucide-react-native';
 
-function Command({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive>) {
+interface CommandProps {
+  children?: React.ReactNode;
+}
+
+function Command({ children }: CommandProps) {
+  return <View style={styles.container}>{children}</View>;
+}
+
+interface CommandDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children?: React.ReactNode;
+}
+
+function CommandDialog({ open, onOpenChange, children }: CommandDialogProps) {
   return (
-    <CommandPrimitive
-      data-slot="command"
-      className={cn(
-        "bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md",
-        className,
-      )}
-      {...props}
-    />
+    <Modal visible={open} transparent animationType="fade" onRequestClose={() => onOpenChange?.(false)}>
+      <View style={styles.overlay}>
+        {children}
+      </View>
+    </Modal>
   );
 }
 
-function CommandDialog({
-  title = "Command Palette",
-  description = "Search for a command to run...",
-  children,
-  ...props
-}: React.ComponentProps<typeof Dialog> & {
-  title?: string;
-  description?: string;
-}) {
-  return (
-    <Dialog {...props}>
-      <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
-      <DialogContent className="overflow-hidden p-0">
-        <Command className="[&_[cmdk-group-heading]]:text-muted-foreground **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
-          {children}
-        </Command>
-      </DialogContent>
-    </Dialog>
-  );
+interface CommandInputProps {
+  placeholder?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
 }
 
-function CommandInput({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+function CommandInput({ placeholder, value, onValueChange }: CommandInputProps) {
   return (
-    <div
-      data-slot="command-input-wrapper"
-      className="flex h-9 items-center gap-2 border-b px-3"
-    >
-      <SearchIcon className="size-4 shrink-0 opacity-50" />
-      <CommandPrimitive.Input
-        data-slot="command-input"
-        className={cn(
-          "placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
-          className,
-        )}
-        {...props}
+    <View style={styles.inputWrapper}>
+      <Search size={18} color="#9ca3af" style={styles.searchIcon} />
+      <TextInput
+        placeholder={placeholder || 'Search...'}
+        value={value}
+        onChangeText={onValueChange}
+        style={styles.input}
+        placeholderTextColor="#9ca3af"
       />
-    </div>
+    </View>
   );
 }
 
-function CommandList({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.List>) {
+interface CommandListProps {
+  children?: React.ReactNode;
+}
+
+function CommandList({ children }: CommandListProps) {
+  return <View style={styles.list}>{children}</View>;
+}
+
+interface CommandEmptyProps {
+  children?: React.ReactNode;
+}
+
+function CommandEmpty({ children }: CommandEmptyProps) {
   return (
-    <CommandPrimitive.List
-      data-slot="command-list"
-      className={cn(
-        "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto",
-        className,
-      )}
-      {...props}
-    />
+    <View style={styles.empty}>
+      <Text style={styles.emptyText}>{children || 'No results found'}</Text>
+    </View>
   );
 }
 
-function CommandEmpty({
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Empty>) {
+interface CommandGroupProps {
+  children?: React.ReactNode;
+  heading?: string;
+}
+
+function CommandGroup({ children, heading }: CommandGroupProps) {
   return (
-    <CommandPrimitive.Empty
-      data-slot="command-empty"
-      className="py-6 text-center text-sm"
-      {...props}
-    />
+    <View>
+      {heading && <Text style={styles.groupHeading}>{heading}</Text>}
+      <View>{children}</View>
+    </View>
   );
 }
 
-function CommandGroup({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Group>) {
+function CommandSeparator() {
+  return <View style={styles.separator} />;
+}
+
+interface CommandItemProps {
+  onSelect?: () => void;
+  children?: React.ReactNode;
+}
+
+function CommandItem({ onSelect, children }: CommandItemProps) {
   return (
-    <CommandPrimitive.Group
-      data-slot="command-group"
-      className={cn(
-        "text-foreground [&_[cmdk-group-heading]]:text-muted-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium",
-        className,
-      )}
-      {...props}
-    />
+    <TouchableOpacity style={styles.item} onPress={onSelect}>
+      {children}
+    </TouchableOpacity>
   );
 }
 
-function CommandSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Separator>) {
-  return (
-    <CommandPrimitive.Separator
-      data-slot="command-separator"
-      className={cn("bg-border -mx-1 h-px", className)}
-      {...props}
-    />
-  );
+function CommandShortcut({ children, style }: { children?: React.ReactNode; style?: any }) {
+  return <Text style={[styles.shortcut, style]}>{children}</Text>;
 }
 
-function CommandItem({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Item>) {
-  return (
-    <CommandPrimitive.Item
-      data-slot="command-item"
-      className={cn(
-        "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function CommandShortcut({
-  className,
-  ...props
-}: React.ComponentProps<"span">) {
-  return (
-    <span
-      data-slot="command-shortcut"
-      className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 8,
+    color: '#1f2937',
+  },
+  list: {
+    maxHeight: 300,
+  },
+  empty: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  groupHeading: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    textTransform: 'uppercase',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 4,
+  },
+  item: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  shortcut: {
+    marginLeft: 'auto',
+    fontSize: 12,
+    color: '#6b7280',
+  },
+});
 
 export {
   Command,
@@ -171,7 +181,9 @@ export {
   CommandList,
   CommandEmpty,
   CommandGroup,
+  CommandSeparator,
   CommandItem,
   CommandShortcut,
-  CommandSeparator,
 };
+
+// Web-only CommandShortcut removed. RN `CommandShortcut` provided above and exported.

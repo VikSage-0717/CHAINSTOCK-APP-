@@ -1,14 +1,37 @@
-import { useState, useEffect } from 'react';
-import { TrendingUp, Brain, History, Sparkles, ArrowRight, BarChart3, ChevronDown, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Dimensions,
+  Alert,
+} from 'react-native';
+
+import {
+  TrendingUp,
+  Brain,
+  History,
+  Sparkles,
+  ArrowRight,
+  BarChart3,
+  ChevronDown,
+  RefreshCw,
+} from 'lucide-react-native';
+
 import { getDashboardAssets, getAssetPrediction } from '../utils/api';
+
+const { width } = Dimensions.get('window');
 
 interface LandingPageProps {
   onGetStarted: () => void;
 }
 
-export default function LandingPage({ onGetStarted }: LandingPageProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
+export default function LandingScreen({
+  onGetStarted,
+}: LandingPageProps) {
   const [tickerIndex, setTickerIndex] = useState(0);
   const [devRunning, setDevRunning] = useState(false);
 
@@ -25,205 +48,455 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       icon: TrendingUp,
       title: 'Live Market Data',
       description: 'Real-time tracking of stocks and cryptocurrencies',
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
+      color: '#2563eb',
+      bg: '#dbeafe',
     },
     {
       icon: Brain,
       title: 'AI Predictions',
       description: 'Machine learning powered price forecasts',
-      color: 'text-purple-600',
-      bg: 'bg-purple-50',
+      color: '#9333ea',
+      bg: '#f3e8ff',
     },
     {
       icon: History,
       title: 'Historical Events',
       description: 'Learn how major events shaped markets since WWI',
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
+      color: '#d97706',
+      bg: '#fef3c7',
     },
     {
       icon: BarChart3,
       title: 'Portfolio Tracking',
       description: 'Monitor your investments in one place',
-      color: 'text-green-600',
-      bg: 'bg-green-50',
+      color: '#16a34a',
+      bg: '#dcfce7',
     },
   ];
 
   useEffect(() => {
-    setIsVisible(true);
-    const tickerInterval = setInterval(() => {
+    const interval = setInterval(() => {
       setTickerIndex((prev) => (prev + 1) % tickerItems.length);
     }, 3000);
-    return () => clearInterval(tickerInterval);
-  }, []);
 
-  const isDev = (typeof process !== 'undefined' && process?.env?.NODE_ENV === 'development') ||
-    (typeof window !== 'undefined' && window.location && (
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.href.indexOf('dev=1') !== -1
-    ));
+    return () => clearInterval(interval);
+  }, []);
 
   const runDevPredictions = async () => {
     try {
       setDevRunning(true);
-      console.log('Dev: fetching dashboard assets...');
+
       const assets = await getDashboardAssets();
-      console.log('Dev: assets', assets?.map((a: any) => a.symbol));
-      const targets = (assets || []).slice(0, 8);
+
+      const targets = (assets || []).slice(0, 5);
+
       for (const t of targets) {
         try {
-          console.log(`Dev: requesting prediction for ${t.symbol}`);
           const pred = await getAssetPrediction(t.symbol);
-          console.log('Dev prediction:', t.symbol, pred);
+          console.log(t.symbol, pred);
         } catch (err) {
-          console.error('Dev prediction error for', t.symbol, err);
+          console.log(err);
         }
       }
-      alert('Dev predictions complete — check console logs.');
-    } catch (err) {
-      console.error('Dev run failed', err);
-      alert('Dev run failed: ' + (err as any)?.message || String(err));
+
+      Alert.alert('Success', 'Predictions completed');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Something went wrong');
     } finally {
       setDevRunning(false);
     }
   };
 
   return (
-    <div className="size-full bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 overflow-auto">
-      <div className="min-h-full flex flex-col items-center justify-between px-6 py-12">
-        {/* Live Ticker */}
-        <div className="w-full max-w-md">
-          <div className="bg-black/20 backdrop-blur-lg rounded-2xl p-4 mb-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <RefreshCw size={14} className="text-white/70 animate-spin" />
-                <span className="text-white/70 text-xs">Live Markets</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-green-400 text-xs">Updated just now</span>
-              </div>
-            </div>
-            <div className="mt-3 flex items-center justify-center gap-4 overflow-hidden">
-              <span
-                key={tickerIndex}
-                className="text-white font-bold text-lg animate-in fade-in slide-in-from-bottom-2 duration-300"
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="#2563eb"
+      />
+
+      {/* Ticker */}
+      <View style={styles.tickerCard}>
+        <View style={styles.tickerTop}>
+          <View style={styles.row}>
+            <RefreshCw size={14} color="#d1d5db" />
+            <Text style={styles.liveText}> Live Markets</Text>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.liveDot} />
+            <Text style={styles.updatedText}>
+              Updated just now
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.tickerBottom}>
+          <Text style={styles.symbol}>
+            {tickerItems[tickerIndex].symbol}
+          </Text>
+
+          <Text style={styles.price}>
+            {tickerItems[tickerIndex].price}
+          </Text>
+
+          <Text
+            style={[
+              styles.change,
+              {
+                color: tickerItems[
+                  tickerIndex
+                ].change.startsWith('+')
+                  ? '#86efac'
+                  : '#fca5a5',
+              },
+            ]}
+          >
+            {tickerItems[tickerIndex].change}
+          </Text>
+        </View>
+      </View>
+
+      {/* Logo */}
+      <View style={styles.logoContainer}>
+        <View style={styles.logoBox}>
+          <TrendingUp
+            size={64}
+            color="#ffffff"
+            strokeWidth={2.5}
+          />
+        </View>
+
+        <Text style={styles.title}>ChainStock</Text>
+
+        <Text style={styles.subtitle}>
+          Your intelligent companion for crypto and
+          stock market analysis
+        </Text>
+      </View>
+
+      {/* Features */}
+      <View style={styles.featureGrid}>
+        {features.map((feature, index) => {
+          const Icon = feature.icon;
+
+          return (
+            <View key={index} style={styles.featureCard}>
+              <View
+                style={[
+                  styles.iconBox,
+                  { backgroundColor: feature.bg },
+                ]}
               >
-                {tickerItems[tickerIndex].symbol}
-              </span>
-              <span className="text-white/80">{tickerItems[tickerIndex].price}</span>
-              <span className={`text-sm font-medium ${tickerItems[tickerIndex].change.startsWith('+') ? 'text-green-300' : 'text-red-300'}`}>
-                {tickerItems[tickerIndex].change}
-              </span>
-            </div>
-          </div>
-        </div>
+                <Icon
+                  size={24}
+                  color={feature.color}
+                />
+              </View>
 
-        {/* Logo & Header */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <div 
-            className={`mb-8 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-          >
-            <div className="bg-white/20 backdrop-blur-lg rounded-3xl p-6 shadow-2xl hover:scale-105 transition-transform cursor-default">
-              <TrendingUp size={64} className="text-white" strokeWidth={2.5} />
-            </div>
-          </div>
+              <Text style={styles.featureTitle}>
+                {feature.title}
+              </Text>
 
-          <h1 
-            className={`text-5xl font-bold text-white mb-4 tracking-tight transition-all duration-700 delay-100 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-          >
-            ChainStock
-          </h1>
+              <Text style={styles.featureDescription}>
+                {feature.description}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
 
-          <p className="text-xl text-white/90 mb-12 max-w-md">
-            Your intelligent companion for crypto and stock market analysis
-          </p>
+      {/* Stats */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>1000+</Text>
+          <Text style={styles.statLabel}>Assets</Text>
+        </View>
 
-          {/* Features Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-12 w-full max-w-md">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={index}
-                  onMouseEnter={() => setHoveredFeature(index)}
-                  onMouseLeave={() => setHoveredFeature(null)}
-                  className={`bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 transition-all duration-300 cursor-pointer ${
-                    hoveredFeature === index 
-                      ? 'bg-white/20 scale-105 shadow-xl border-white/40' 
-                      : 'hover:bg-white/15'
-                  }`}
-                >
-                  <div className={`${feature.bg} rounded-xl p-3 w-fit mb-3 transition-transform ${hoveredFeature === index ? 'scale-110' : ''}`}>
-                    <Icon size={24} className={feature.color} />
-                  </div>
-                  <h3 className="font-semibold text-white text-sm mb-1">
-                    {feature.title}
-                  </h3>
-                  <p className="text-xs text-white/70">
-                    {feature.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+        <View style={styles.divider} />
 
-          {/* Stats */}
-          <div className="flex items-center gap-6 mb-8 text-white/90">
-            <div className="text-center">
-              <p className="text-2xl font-bold">1000+</p>
-              <p className="text-xs">Assets</p>
-            </div>
-            <div className="w-px h-8 bg-white/30" />
-            <div className="text-center">
-              <p className="text-2xl font-bold">AI</p>
-              <p className="text-xs">Powered</p>
-            </div>
-            <div className="w-px h-8 bg-white/30" />
-            <div className="text-center">
-              <p className="text-2xl font-bold">24/7</p>
-              <p className="text-xs">Live Data</p>
-            </div>
-          </div>
-        </div>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>AI</Text>
+          <Text style={styles.statLabel}>Powered</Text>
+        </View>
 
-        {/* CTA Button */}
-        <div className="w-full max-w-md space-y-4">
-          {isDev && (
-            <div>
-              <button
-                onClick={runDevPredictions}
-                disabled={devRunning}
-                className="w-full bg-white/20 text-white py-3 px-6 rounded-2xl font-semibold text-sm border border-white/30 hover:bg-white/30 mb-2"
-              >
-                {devRunning ? 'Running predictions...' : 'Dev: Run Predictions'}
-              </button>
-            </div>
-          )}
+        <View style={styles.divider} />
 
-          <button
-            onClick={onGetStarted}
-            className="w-full bg-white text-purple-600 py-4 px-8 rounded-2xl font-bold text-lg shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group"
-          >
-            Get Started
-            <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
-          </button>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>24/7</Text>
+          <Text style={styles.statLabel}>Live Data</Text>
+        </View>
+      </View>
 
-          <div className="flex items-center justify-center gap-2 text-white/70 text-xs">
-            <Sparkles size={14} />
-            <span>Free to use • No signup required</span>
-          </div>
-        </div>
+      {/* Dev Button */}
+      <TouchableOpacity
+        style={styles.devButton}
+        onPress={runDevPredictions}
+        disabled={devRunning}
+      >
+        <Text style={styles.devButtonText}>
+          {devRunning
+            ? 'Running Predictions...'
+            : 'Dev: Run Predictions'}
+        </Text>
+      </TouchableOpacity>
 
-        {/* Scroll Indicator */}
-        <div className="flex flex-col items-center gap-2 text-white/50 mt-4 animate-bounce">
-          <span className="text-xs">Scroll to explore</span>
-          <ChevronDown size={20} />
-        </div>
-      </div>
-    </div>
+      {/* CTA */}
+      <TouchableOpacity
+        style={styles.ctaButton}
+        onPress={onGetStarted}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.ctaText}>
+          Get Started
+        </Text>
+
+        <ArrowRight size={22} color="#7c3aed" />
+      </TouchableOpacity>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Sparkles size={14} color="#d1d5db" />
+
+        <Text style={styles.footerText}>
+          Free to use • No signup required
+        </Text>
+      </View>
+
+      {/* Scroll Indicator */}
+      <View style={styles.scrollIndicator}>
+        <Text style={styles.scrollText}>
+          Scroll to explore
+        </Text>
+
+        <ChevronDown size={18} color="#d1d5db" />
+      </View>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+  },
+
+  content: {
+    padding: 20,
+    paddingTop: 50,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+
+  tickerCard: {
+    width: '100%',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 30,
+  },
+
+  tickerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  tickerBottom: {
+    marginTop: 15,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  liveText: {
+    color: '#d1d5db',
+    fontSize: 12,
+  },
+
+  updatedText: {
+    color: '#86efac',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+
+  liveDot: {
+    width: 8,
+    height: 8,
+    backgroundColor: '#22c55e',
+    borderRadius: 4,
+  },
+
+  symbol: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginRight: 15,
+  },
+
+  price: {
+    color: '#e5e7eb',
+    fontSize: 16,
+    marginRight: 10,
+  },
+
+  change: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+
+  logoBox: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 25,
+    borderRadius: 30,
+    marginBottom: 25,
+  },
+
+  title: {
+    color: '#ffffff',
+    fontSize: 42,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+
+  subtitle: {
+    color: '#e5e7eb',
+    fontSize: 18,
+    textAlign: 'center',
+    lineHeight: 26,
+    paddingHorizontal: 10,
+  },
+
+  featureGrid: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 40,
+  },
+
+  featureCard: {
+    width: width * 0.42,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 15,
+  },
+
+  iconBox: {
+    padding: 12,
+    borderRadius: 14,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+
+  featureTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+
+  featureDescription: {
+    color: '#d1d5db',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+
+  statItem: {
+    alignItems: 'center',
+    paddingHorizontal: 18,
+  },
+
+  statValue: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+
+  statLabel: {
+    color: '#d1d5db',
+    fontSize: 12,
+    marginTop: 4,
+  },
+
+  divider: {
+    width: 1,
+    height: 35,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+
+  devButton: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: 14,
+    borderRadius: 18,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+
+  devButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+
+  ctaButton: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    paddingVertical: 18,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+
+  ctaText: {
+    color: '#7c3aed',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginRight: 10,
+  },
+
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 25,
+  },
+
+  footerText: {
+    color: '#d1d5db',
+    fontSize: 12,
+    marginLeft: 6,
+  },
+
+  scrollIndicator: {
+    alignItems: 'center',
+  },
+
+  scrollText: {
+    color: '#d1d5db',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+});

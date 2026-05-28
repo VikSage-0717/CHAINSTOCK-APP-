@@ -1,102 +1,84 @@
-import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
-import { ChevronRight, MoreHorizontal } from "lucide-react";
+import React from 'react';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 
-import { cn } from "./utils";
-
-function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
-  return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />;
+function Breadcrumb({ children }: any) {
+  return <View style={styles.breadcrumb}>{children}</View>;
 }
 
-function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
+function BreadcrumbList({ children }: any) {
+  return <View style={styles.list}>{children}</View>;
+}
+
+function BreadcrumbItem({ children }: any) {
+  return <View style={styles.item}>{children}</View>;
+}
+
+function BreadcrumbLink({ onPress, children }: any) {
   return (
-    <ol
-      data-slot="breadcrumb-list"
-      className={cn(
-        "text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm break-words sm:gap-2.5",
-        className,
-      )}
-      {...props}
-    />
+    <TouchableOpacity onPress={onPress}>
+      <Text style={styles.link}>{children}</Text>
+    </TouchableOpacity>
   );
 }
 
-function BreadcrumbItem({ className, ...props }: React.ComponentProps<"li">) {
+function BreadcrumbPage({ children }: any) {
+  return <Text style={styles.page}>{children}</Text>;
+}
+
+function BreadcrumbSeparator() {
   return (
-    <li
-      data-slot="breadcrumb-item"
-      className={cn("inline-flex items-center gap-1.5", className)}
-      {...props}
-    />
+    <View style={styles.separator}>
+      <ChevronRight size={16} color="#6b7280" />
+    </View>
   );
 }
 
-function BreadcrumbLink({
-  asChild,
-  className,
-  ...props
-}: React.ComponentProps<"a"> & {
-  asChild?: boolean;
-}) {
-  const Comp = asChild ? Slot : "a";
-
+function BreadcrumbEllipsis() {
   return (
-    <Comp
-      data-slot="breadcrumb-link"
-      className={cn("hover:text-foreground transition-colors", className)}
-      {...props}
-    />
+    <View style={styles.ellipsis}>
+      <Text style={styles.ellipsisText}>...</Text>
+    </View>
   );
 }
 
-function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
-  return (
-    <span
-      data-slot="breadcrumb-page"
-      role="link"
-      aria-disabled="true"
-      aria-current="page"
-      className={cn("text-foreground font-normal", className)}
-      {...props}
-    />
-  );
-}
-
-function BreadcrumbSeparator({
-  children,
-  className,
-  ...props
-}: React.ComponentProps<"li">) {
-  return (
-    <li
-      data-slot="breadcrumb-separator"
-      role="presentation"
-      aria-hidden="true"
-      className={cn("[&>svg]:size-3.5", className)}
-      {...props}
-    >
-      {children ?? <ChevronRight />}
-    </li>
-  );
-}
-
-function BreadcrumbEllipsis({
-  className,
-  ...props
-}: React.ComponentProps<"span">) {
-  return (
-    <span
-      data-slot="breadcrumb-ellipsis"
-      role="presentation"
-      aria-hidden="true"
-      className={cn("flex size-9 items-center justify-center", className)}
-      {...props}
-    >
-      <MoreHorizontal className="size-4" />
-      <span className="sr-only">More</span>
-    </span>
-  );
-}
+const styles = StyleSheet.create({
+  breadcrumb: {
+    marginVertical: 8,
+  },
+  list: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  link: {
+    fontSize: 14,
+    color: '#2563eb',
+  },
+  page: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1f2937',
+  },
+  separator: {
+    marginHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ellipsis: {
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  ellipsisText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+});
 
 export {
   Breadcrumb,

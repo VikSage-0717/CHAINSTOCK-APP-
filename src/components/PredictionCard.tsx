@@ -1,4 +1,17 @@
-import { Brain, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import React from 'react';
+
+import {
+  View,
+  Text,
+  StyleSheet,
+} from 'react-native';
+
+import {
+  Brain,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+} from 'lucide-react-native';
 
 interface PredictionCardProps {
   symbol: string;
@@ -19,66 +32,295 @@ export default function PredictionCard({
   timeframe,
   trend,
 }: PredictionCardProps) {
-  const change = ((predictedPrice - currentPrice) / currentPrice) * 100;
+  const change =
+    ((predictedPrice -
+      currentPrice) /
+      currentPrice) *
+    100;
 
   const trendConfig = {
-    bullish: { color: 'bg-green-50 border-green-200', icon: TrendingUp, iconColor: 'text-green-600' },
-    bearish: { color: 'bg-red-50 border-red-200', icon: TrendingDown, iconColor: 'text-red-600' },
-    neutral: { color: 'bg-gray-50 border-gray-200', icon: Minus, iconColor: 'text-gray-600' },
+    bullish: {
+      backgroundColor: '#ecfdf5',
+      borderColor: '#bbf7d0',
+      icon: TrendingUp,
+      iconColor: '#16a34a',
+      badgeBg: '#dcfce7',
+    },
+
+    bearish: {
+      backgroundColor: '#fef2f2',
+      borderColor: '#fecaca',
+      icon: TrendingDown,
+      iconColor: '#dc2626',
+      badgeBg: '#fee2e2',
+    },
+
+    neutral: {
+      backgroundColor: '#f9fafb',
+      borderColor: '#d1d5db',
+      icon: Minus,
+      iconColor: '#6b7280',
+      badgeBg: '#e5e7eb',
+    },
   };
 
   const config = trendConfig[trend];
+
   const TrendIcon = config.icon;
 
   return (
-    <div className={`rounded-xl p-4 border ${config.color}`}>
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Brain size={18} className="text-purple-600" />
-            <h3 className="font-semibold text-gray-900">{symbol}</h3>
-          </div>
-          <p className="text-sm text-gray-600">{name}</p>
-        </div>
-
-        <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${config.iconColor} bg-white`}>
-          <TrendIcon size={16} />
-          <span className="text-xs font-semibold uppercase">{trend}</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <div>
-          <p className="text-xs text-gray-500 mb-1">Current Price</p>
-          <p className="font-semibold text-gray-900">${currentPrice.toFixed(2)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500 mb-1">Predicted ({timeframe})</p>
-          <p className="font-semibold text-gray-900">${predictedPrice.toFixed(2)}</p>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">Expected Change</span>
-          <span className={`font-semibold ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {change >= 0 ? '+' : ''}{change.toFixed(2)}%
-          </span>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between text-sm mb-1">
-            <span className="text-gray-600">Confidence</span>
-            <span className="font-semibold text-gray-900">{confidence}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-purple-600 h-2 rounded-full transition-all"
-              style={{ width: `${confidence}%` }}
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor:
+            config.backgroundColor,
+          borderColor:
+            config.borderColor,
+        },
+      ]}
+    >
+      {/* HEADER */}
+      <View style={styles.header}>
+        <View>
+          <View style={styles.symbolRow}>
+            <Brain
+              size={18}
+              color="#9333ea"
             />
-          </div>
-        </div>
-      </div>
-    </div>
+
+            <Text style={styles.symbol}>
+              {symbol}
+            </Text>
+          </View>
+
+          <Text style={styles.name}>
+            {name}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.trendBadge,
+            {
+              backgroundColor:
+                config.badgeBg,
+            },
+          ]}
+        >
+          <TrendIcon
+            size={16}
+            color={config.iconColor}
+          />
+
+          <Text
+            style={[
+              styles.trendText,
+              {
+                color:
+                  config.iconColor,
+              },
+            ]}
+          >
+            {trend.toUpperCase()}
+          </Text>
+        </View>
+      </View>
+
+      {/* PRICE SECTION */}
+      <View style={styles.priceGrid}>
+        <View style={styles.priceBox}>
+          <Text style={styles.label}>
+            Current Price
+          </Text>
+
+          <Text style={styles.price}>
+            $
+            {currentPrice.toFixed(
+              2
+            )}
+          </Text>
+        </View>
+
+        <View style={styles.priceBox}>
+          <Text style={styles.label}>
+            Predicted ({timeframe})
+          </Text>
+
+          <Text style={styles.price}>
+            $
+            {predictedPrice.toFixed(
+              2
+            )}
+          </Text>
+        </View>
+      </View>
+
+      {/* CHANGE */}
+      <View style={styles.infoRow}>
+        <Text style={styles.infoLabel}>
+          Expected Change
+        </Text>
+
+        <Text
+          style={[
+            styles.changeText,
+            {
+              color:
+                change >= 0
+                  ? '#16a34a'
+                  : '#dc2626',
+            },
+          ]}
+        >
+          {change >= 0 ? '+' : ''}
+          {change.toFixed(2)}%
+        </Text>
+      </View>
+
+      {/* CONFIDENCE */}
+      <View style={styles.confidenceSection}>
+        <View style={styles.infoRow}>
+          <Text
+            style={styles.infoLabel}
+          >
+            Confidence
+          </Text>
+
+          <Text
+            style={
+              styles.confidenceText
+            }
+          >
+            {confidence}%
+          </Text>
+        </View>
+
+        <View style={styles.progressBg}>
+          <View
+            style={[
+              styles.progressFill,
+              {
+                width: `${confidence}%`,
+              },
+            ]}
+          />
+        </View>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
+  },
+
+  header: {
+    flexDirection: 'row',
+    justifyContent:
+      'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+
+  symbolRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+
+  symbol: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginLeft: 6,
+  },
+
+  name: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+
+  trendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+
+  trendText: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginLeft: 4,
+  },
+
+  priceGrid: {
+    flexDirection: 'row',
+    justifyContent:
+      'space-between',
+    marginBottom: 16,
+  },
+
+  priceBox: {
+    flex: 1,
+  },
+
+  label: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+
+  price: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent:
+      'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
+  infoLabel: {
+    fontSize: 14,
+    color: '#4b5563',
+  },
+
+  changeText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  confidenceSection: {
+    marginTop: 6,
+  },
+
+  confidenceText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+
+  progressBg: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 999,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#9333ea',
+    borderRadius: 999,
+  },
+});

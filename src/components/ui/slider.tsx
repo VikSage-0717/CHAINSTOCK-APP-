@@ -1,63 +1,88 @@
-"use client";
+import React, { useState, useRef } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, LayoutChangeEvent } from 'react-native';
 
-import * as React from "react";
-import * as SliderPrimitive from "@radix-ui/react-slider";
-
-import { cn } from "./utils";
+interface SliderProps {
+  min?: number;
+  max?: number;
+  step?: number;
+  value?: number;
+  onValueChange?: (value: number) => void;
+  disabled?: boolean;
+}
 
 function Slider({
-  className,
-  defaultValue,
-  value,
   min = 0,
   max = 100,
-  ...props
-}: React.ComponentProps<typeof SliderPrimitive.Root>) {
-  const _values = React.useMemo(
-    () =>
-      Array.isArray(value)
-        ? value
-        : Array.isArray(defaultValue)
-          ? defaultValue
-          : [min, max],
-    [value, defaultValue, min, max],
-  );
+  step = 1,
+  value: controlledValue,
+  onValueChange,
+  disabled = false,
+}: SliderProps) {
+  const [internalValue, setInternalValue] = useState(min);
+  const [width, setWidth] = useState(0);
+  const isControlled = controlledValue !== undefined;
+  const current = isControlled ? controlledValue! : internalValue;
+
+  const handlePress = (evt: any) => {
+    if (disabled || width === 0) return;
+    const locationX = evt.nativeEvent.locationX;
+    const ratio = Math.max(0, Math.min(1, locationX / width));
+    const raw = min + ratio * (max - min);
+    const stepped = Math.round(raw / step) * step;
+    const newValue = Math.max(min, Math.min(max, stepped));
+    if (!isControlled) setInternalValue(newValue);
+    onValueChange?.(newValue);
+  };
+
+  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+
+  const percentage = ((current - min) / (max - min)) * 100;
 
   return (
-    <SliderPrimitive.Root
-      data-slot="slider"
-      defaultValue={defaultValue}
-      value={value}
-      min={min}
-      max={max}
-      className={cn(
-        "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
-        className,
-      )}
-      {...props}
-    >
-      <SliderPrimitive.Track
-        data-slot="slider-track"
-        className={cn(
-          "bg-muted relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-4 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5",
-        )}
+    <View style={styles.container}>
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={handlePress}
+        onLayout={onLayout}
+        style={styles.trackWrapper}
+        disabled={disabled}
       >
-        <SliderPrimitive.Range
-          data-slot="slider-range"
-          className={cn(
-            "bg-primary absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
-          )}
-        />
-      </SliderPrimitive.Track>
-      {Array.from({ length: _values.length }, (_, index) => (
-        <SliderPrimitive.Thumb
-          data-slot="slider-thumb"
-          key={index}
-          className="border-primary bg-background ring-ring/50 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
-        />
-      ))}
-    </SliderPrimitive.Root>
+        <View style={styles.track} />
+        <View style={[styles.filled, { width: `${percentage}%` }]} />
+      </TouchableOpacity>
+      <Text style={styles.valueText}>{current}</Text>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    paddingVertical: 12,
+  },
+  trackWrapper: {
+    height: 32,
+    justifyContent: 'center',
+  },
+  track: {
+    height: 6,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+  },
+  filled: {
+    height: 6,
+    backgroundColor: '#2563eb',
+    borderRadius: 6,
+    position: 'absolute',
+    left: 0,
+  },
+  valueText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#374151',
+  },
+});
 
 export { Slider };

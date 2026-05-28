@@ -1,13 +1,21 @@
-import { cn } from "./utils";
+import React from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 
-function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="skeleton"
-      className={cn("bg-accent animate-pulse rounded-md", className)}
-      {...props}
-    />
-  );
+interface SkeletonProps {
+  style?: ViewStyle;
 }
+
+function Skeleton({ style }: SkeletonProps) {
+  return <View style={[styles.skeleton, style]} />;
+}
+
+const styles = StyleSheet.create({
+  skeleton: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    height: 16,
+    marginVertical: 8,
+  },
+});
 
 export { Skeleton };

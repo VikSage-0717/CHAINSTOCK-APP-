@@ -1,48 +1,96 @@
-"use client";
+import React, { useState } from 'react';
+import { View, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 
-import * as React from "react";
-import * as PopoverPrimitive from "@radix-ui/react-popover";
-
-import { cn } from "./utils";
-
-function Popover({
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Root>) {
-  return <PopoverPrimitive.Root data-slot="popover" {...props} />;
+interface PopoverContextType {
+  open: boolean;
+  setOpen: (open: boolean) => void;
 }
 
-function PopoverTrigger({
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
-  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
+const PopoverContext = React.createContext<PopoverContextType | undefined>(
+  undefined,
+);
+
+interface PopoverProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children?: React.ReactNode;
 }
 
-function PopoverContent({
-  className,
-  align = "center",
-  sideOffset = 4,
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+function Popover({ open: controlledOpen, onOpenChange, children }: PopoverProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (controlledOpen === undefined) {
+      setUncontrolledOpen(newOpen);
+    }
+    onOpenChange?.(newOpen);
+  };
+
   return (
-    <PopoverPrimitive.Portal>
-      <PopoverPrimitive.Content
-        data-slot="popover-content"
-        align={align}
-        sideOffset={sideOffset}
-        className={cn(
-          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border p-4 shadow-md outline-hidden",
-          className,
-        )}
-        {...props}
-      />
-    </PopoverPrimitive.Portal>
+    <PopoverContext.Provider value={{ open, setOpen: handleOpenChange }}>
+      <View>{children}</View>
+    </PopoverContext.Provider>
   );
 }
 
-function PopoverAnchor({
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
-  return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
+function PopoverTrigger({ onPress, children }: any) {
+  const context = React.useContext(PopoverContext);
+  if (!context) throw new Error('PopoverTrigger must be used within Popover');
+
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        onPress?.();
+        context.setOpen(!context.open);
+      }}
+    >
+      {children}
+    </TouchableOpacity>
+  );
 }
+
+function PopoverContent({ children }: any) {
+  const context = React.useContext(PopoverContext);
+  if (!context) throw new Error('PopoverContent must be used within Popover');
+
+  return (
+    <Modal visible={context.open} transparent animationType="fade">
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={() => context.setOpen(false)}
+      >
+        <View style={styles.content}>
+          {children}
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+function PopoverAnchor({ children }: any) {
+  return <View>{children}</View>;
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  content: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 16,
+    minWidth: 280,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+});
 
 export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor };

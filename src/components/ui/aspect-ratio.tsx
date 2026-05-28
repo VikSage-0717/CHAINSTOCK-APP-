@@ -1,11 +1,25 @@
-"use client";
+import React from 'react';
+import { View, ViewStyle } from 'react-native';
 
-import * as AspectRatioPrimitive from "@radix-ui/react-aspect-ratio";
+interface AspectRatioProps {
+  ratio?: number;
+  children?: React.ReactNode;
+  style?: ViewStyle;
+}
 
-function AspectRatio({
-  ...props
-}: React.ComponentProps<typeof AspectRatioPrimitive.Root>) {
-  return <AspectRatioPrimitive.Root data-slot="aspect-ratio" {...props} />;
+function AspectRatio({ ratio = 1, children, style }: AspectRatioProps) {
+  return (
+    <View
+      style={[
+        {
+          aspectRatio: ratio,
+        },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
 }
 
 export { AspectRatio };

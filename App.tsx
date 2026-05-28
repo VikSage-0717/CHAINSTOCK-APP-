@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StatusBar } from 'react-native';
+import { View, StatusBar, Text } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Home, TrendingUp, History, BarChart3 } from 'lucide-react-native';
 
 import LandingScreen from './src/screens/LandingScreen';
@@ -36,7 +37,7 @@ function DashboardStack() {
         name="AssetDetail"
         component={AssetDetailScreen}
         options={{
-          animationEnabled: true,
+          animation: 'default' as any,
         }}
       />
     </Stack.Navigator>
@@ -101,28 +102,58 @@ export default function App() {
     setShowLanding(false);
   };
 
+  class ErrorBoundary extends React.Component<any, { error: any }>{
+    constructor(props: any) {
+      super(props);
+      this.state = { error: null };
+    }
+
+    static getDerivedStateFromError(error: any) {
+      return { error };
+    }
+
+    componentDidCatch(error: any, info: any) {
+      // You can log error details to monitoring here
+      // console.error(error, info);
+    }
+
+    render() {
+      if (this.state.error) {
+        return (
+          <View style={{flex:1, justifyContent:'center', alignItems:'center', padding:20}}>
+            <Text style={{fontSize:18, fontWeight:'700', marginBottom:12}}>An error occurred</Text>
+            <Text style={{color:'#333'}}>{String(this.state.error)}</Text>
+          </View>
+        );
+      }
+      return this.props.children;
+    }
+  }
+
   return (
-    <>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {showLanding ? (
-            <Stack.Screen
-              name="Landing"
-              options={{ animationEnabled: false }}
-              children={() => (
-                <LandingScreen onGetStarted={handleGetStarted} />
-              )}
-            />
-          ) : (
-            <Stack.Screen
-              name="MainApp"
-              options={{ animationEnabled: false }}
-              component={MainTabs}
-            />
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
-    </>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            {showLanding ? (
+              <Stack.Screen
+                name="Landing"
+                options={{ animation: 'none' as any }}
+                children={() => (
+                  <LandingScreen onGetStarted={handleGetStarted} />
+                )}
+              />
+            ) : (
+              <Stack.Screen
+                name="MainApp"
+                options={{ animation: 'none' as any }}
+                component={MainTabs}
+              />
+            )}
+          </Stack.Navigator>
+        </NavigationContainer>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }

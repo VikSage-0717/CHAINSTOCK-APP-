@@ -1,32 +1,53 @@
-"use client";
+import React from 'react';
+import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Check } from 'lucide-react-native';
 
-import * as React from "react";
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { CheckIcon } from "lucide-react";
-
-import { cn } from "./utils";
+interface CheckboxProps {
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  disabled?: boolean;
+}
 
 function Checkbox({
-  className,
-  ...props
-}: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+  checked = false,
+  onCheckedChange,
+  disabled = false,
+}: CheckboxProps) {
   return (
-    <CheckboxPrimitive.Root
-      data-slot="checkbox"
-      className={cn(
-        "peer border bg-input-background dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-      {...props}
+    <TouchableOpacity
+      style={[
+        styles.checkbox,
+        checked && styles.checked,
+        disabled && styles.disabled,
+      ]}
+      onPress={() => onCheckedChange?.(!checked)}
+      disabled={disabled}
     >
-      <CheckboxPrimitive.Indicator
-        data-slot="checkbox-indicator"
-        className="flex items-center justify-center text-current transition-none"
-      >
-        <CheckIcon className="size-3.5" />
-      </CheckboxPrimitive.Indicator>
-    </CheckboxPrimitive.Root>
+      {checked && (
+        <Check size={14} color="#ffffff" strokeWidth={3} />
+      )}
+    </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checked: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+});
 
 export { Checkbox };

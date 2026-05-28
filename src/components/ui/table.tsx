@@ -1,108 +1,76 @@
-"use client";
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 
-import * as React from "react";
-
-import { cn } from "./utils";
-
-function Table({ className, ...props }: React.ComponentProps<"table">) {
-  return (
-    <div
-      data-slot="table-container"
-      className="relative w-full overflow-x-auto"
-    >
-      <table
-        data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
-        {...props}
-      />
-    </div>
-  );
+function Table({ children }: { children?: React.ReactNode }) {
+  return <ScrollView horizontal style={styles.container}>{children}</ScrollView>;
 }
 
-function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-  return (
-    <thead
-      data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
-      {...props}
-    />
-  );
+function TableHeader({ children }: { children?: React.ReactNode }) {
+  return <View style={styles.header}>{children}</View>;
 }
 
-function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
-  return (
-    <tbody
-      data-slot="table-body"
-      className={cn("[&_tr:last-child]:border-0", className)}
-      {...props}
-    />
-  );
+function TableBody({ children }: { children?: React.ReactNode }) {
+  return <View style={styles.body}>{children}</View>;
 }
 
-function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
-  return (
-    <tfoot
-      data-slot="table-footer"
-      className={cn(
-        "bg-muted/50 border-t font-medium [&>tr]:last:border-b-0",
-        className,
-      )}
-      {...props}
-    />
-  );
+function TableFooter({ children }: { children?: React.ReactNode }) {
+  return <View style={styles.footer}>{children}</View>;
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
-  return (
-    <tr
-      data-slot="table-row"
-      className={cn(
-        "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
-        className,
-      )}
-      {...props}
-    />
-  );
+function TableRow({ children }: { children?: React.ReactNode }) {
+  return <View style={styles.row}>{children}</View>;
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
-  return (
-    <th
-      data-slot="table-head"
-      className={cn(
-        "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
-        className,
-      )}
-      {...props}
-    />
-  );
+function TableHead({ children }: { children?: React.ReactNode }) {
+  return <Text style={styles.head}>{children}</Text>;
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
-  return (
-    <td
-      data-slot="table-cell"
-      className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
-        className,
-      )}
-      {...props}
-    />
-  );
+function TableCell({ children }: { children?: React.ReactNode }) {
+  return <Text style={styles.cell}>{children}</Text>;
 }
 
-function TableCaption({
-  className,
-  ...props
-}: React.ComponentProps<"caption">) {
-  return (
-    <caption
-      data-slot="table-caption"
-      className={cn("text-muted-foreground mt-4 text-sm", className)}
-      {...props}
-    />
-  );
+function TableCaption({ children }: { children?: React.ReactNode }) {
+  return <Text style={styles.caption}>{children}</Text>;
 }
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+  },
+  header: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    paddingVertical: 8,
+  },
+  body: {
+    paddingVertical: 8,
+  },
+  footer: {
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  row: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  head: {
+    fontWeight: '700',
+    paddingHorizontal: 8,
+    minWidth: 100,
+  },
+  cell: {
+    paddingHorizontal: 8,
+    minWidth: 100,
+  },
+  caption: {
+    color: '#6b7280',
+    marginTop: 8,
+  },
+});
 
 export {
   Table,

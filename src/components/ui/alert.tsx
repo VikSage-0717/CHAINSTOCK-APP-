@@ -1,66 +1,66 @@
-import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import React from 'react';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 
-import { cn } from "./utils";
+interface AlertProps {
+  variant?: 'default' | 'destructive';
+  children?: React.ReactNode;
+  style?: ViewStyle;
+}
 
-const alertVariants = cva(
-  "relative w-full rounded-lg border px-4 py-3 text-sm grid has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] grid-cols-[0_1fr] has-[>svg]:gap-x-3 gap-y-0.5 items-start [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
-  {
-    variants: {
-      variant: {
-        default: "bg-card text-card-foreground",
-        destructive:
-          "text-destructive bg-card [&>svg]:text-current *:data-[slot=alert-description]:text-destructive/90",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
+interface AlertTitleProps {
+  children?: React.ReactNode;
+}
+
+interface AlertDescriptionProps {
+  children?: React.ReactNode;
+}
+
+function Alert({ variant = 'default', children, style }: AlertProps) {
+  const alertStyle =
+    variant === 'destructive' ? styles.destructive : styles.default;
+  return (
+    <View style={[alertStyle, style]}>
+      {children}
+    </View>
+  );
+}
+
+function AlertTitle({ children }: AlertTitleProps) {
+  return <Text style={styles.title}>{children}</Text>;
+}
+
+function AlertDescription({ children }: AlertDescriptionProps) {
+  return <Text style={styles.description}>{children}</Text>;
+}
+
+const styles = StyleSheet.create({
+  default: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 16,
+    marginVertical: 8,
+    backgroundColor: '#f9fafb',
   },
-);
-
-function Alert({
-  className,
-  variant,
-  ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
-  return (
-    <div
-      data-slot="alert"
-      role="alert"
-      className={cn(alertVariants({ variant }), className)}
-      {...props}
-    />
-  );
-}
-
-function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="alert-title"
-      className={cn(
-        "col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function AlertDescription({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="alert-description"
-      className={cn(
-        "text-muted-foreground col-start-2 grid justify-items-start gap-1 text-sm [&_p]:leading-relaxed",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+  destructive: {
+    borderWidth: 1,
+    borderColor: '#dc2626',
+    borderRadius: 8,
+    padding: 16,
+    marginVertical: 8,
+    backgroundColor: '#fef2f2',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#1f2937',
+  },
+  description: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+});
 
 export { Alert, AlertTitle, AlertDescription };

@@ -1,31 +1,62 @@
-"use client";
+import React from 'react';
+import { TouchableOpacity, View, StyleSheet, Animated } from 'react-native';
 
-import * as React from "react";
-import * as SwitchPrimitive from "@radix-ui/react-switch";
-
-import { cn } from "./utils";
+interface SwitchProps {
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  disabled?: boolean;
+}
 
 function Switch({
-  className,
-  ...props
-}: React.ComponentProps<typeof SwitchPrimitive.Root>) {
+  checked = false,
+  onCheckedChange,
+  disabled = false,
+}: SwitchProps) {
   return (
-    <SwitchPrimitive.Root
-      data-slot="switch"
-      className={cn(
-        "peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-switch-background focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-      {...props}
+    <TouchableOpacity
+      style={[
+        styles.switch,
+        checked && styles.checked,
+        disabled && styles.disabled,
+      ]}
+      onPress={() => onCheckedChange?.(!checked)}
+      disabled={disabled}
+      activeOpacity={0.8}
     >
-      <SwitchPrimitive.Thumb
-        data-slot="switch-thumb"
-        className={cn(
-          "bg-card dark:data-[state=unchecked]:bg-card-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0",
-        )}
+      <View
+        style={[
+          styles.thumb,
+          checked && styles.thumbChecked,
+        ]}
       />
-    </SwitchPrimitive.Root>
+    </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  switch: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#d1d5db',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  checked: {
+    backgroundColor: '#2563eb',
+  },
+  thumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+  },
+  thumbChecked: {
+    alignSelf: 'flex-end',
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+});
 
 export { Switch };

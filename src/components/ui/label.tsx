@@ -1,24 +1,21 @@
-"use client";
+import React from 'react';
+import { Text, StyleSheet } from 'react-native';
 
-import * as React from "react";
-import * as LabelPrimitive from "@radix-ui/react-label";
-
-import { cn } from "./utils";
-
-function Label({
-  className,
-  ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>) {
-  return (
-    <LabelPrimitive.Root
-      data-slot="label"
-      className={cn(
-        "flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    />
-  );
+interface LabelProps {
+  children?: React.ReactNode;
 }
+
+function Label({ children }: LabelProps) {
+  return <Text style={styles.label}>{children}</Text>;
+}
+
+const styles = StyleSheet.create({
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 6,
+    color: '#1f2937',
+  },
+});
 
 export { Label };

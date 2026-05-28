@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  TouchableOpacity,
   FlatList,
-  ActivityIndicator,
+  Animated,
+  LayoutAnimation,
+  UIManager,
+  Platform,
 } from 'react-native';
-// Use simple emoji for icons to avoid external icon package issues on web
+import PredictionRangeSlider from '../components/PredictionRangeSlider';
 import { getDashboardAssets, getAssetPrediction } from '../utils/api';
 
 interface PredictionItem {
@@ -18,58 +19,96 @@ interface PredictionItem {
   confidence: number;
   timeframe: string;
   trend: 'bullish' | 'bearish' | 'neutral';
-  sentimentScore?: number;
+  sentimentScore?: number | null;
 }
 
 export default function PredictionsScreen() {
   const [predictions, setPredictions] = useState<PredictionItem[]>([]);
-  const [selectedTimeframe, setSelectedTimeframe] = useState('24h');
+  const [predictionYears, setPredictionYears] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
+  const latestYearsRef = useRef(predictionYears);
 
-  const timeframes = ['24h', '7d', '30d'];
+  // Enable LayoutAnimation on Android
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchPredictionsData = async () => {
       setIsLoading(true);
+      latestYearsRef.current = predictionYears;
+      try { console.debug && console.debug('PredictionsScreen.fetchPredictionsData.start', { predictionYears }); } catch(e) {}
+      try { console.log && console.log('Recalculating Predictions for:', predictionYears); } catch(e) {}
+
       try {
         const assets = await getDashboardAssets();
-        
         if (!assets || assets.length === 0) {
           setPredictions([]);
           setIsLoading(false);
           return;
         }
 
-        const newPredictions: PredictionItem[] = [];
-        // Get first 10 assets instead of 6 to show more variety
-        const topAssets = assets.slice(0, 10);
+        // Synchronous lightweight predictions for instant feedback
+        const syncPreds: PredictionItem[] = assets.map((asset) => {
+          const current = asset.price || 0;
+          const cfg = predictionYears <= 1 ? { clamp: 0.03, trendThreshold: 0.015 }
+            : predictionYears <= 3 ? { clamp: 0.07, trendThreshold: 0.03 }
+            : predictionYears <= 5 ? { clamp: 0.12, trendThreshold: 0.05 }
+            : predictionYears <= 7 ? { clamp: 0.18, trendThreshold: 0.07 }
+            : { clamp: 0.26, trendThreshold: 0.09 };
 
-        for (const asset of topAssets) {
-          try {
-            const pred = await getAssetPrediction(asset.symbol);
-            if (pred && pred.predictions && pred.predictions.length > 0) {
-              const selectedPred = pred.predictions.find(
-                (p: any) => p.timeframe === selectedTimeframe
-              );
-              if (selectedPred) {
-                newPredictions.push({
-                  symbol: asset.symbol,
-                  name: asset.name,
-                  currentPrice: asset.price || 0,
-                  predictedPrice: selectedPred.predictedPrice || asset.price,
-                  confidence: selectedPred.confidence || 65,
-                  timeframe: selectedTimeframe,
-                  trend: selectedPred.trend || 'neutral',
-                  sentimentScore: pred.sentimentScore,
-                });
-              }
-            }
-          } catch (assetError) {
-            console.error(`Error fetching prediction for ${asset.symbol}:`, assetError);
-            // Continue with next asset
-          }
-        }
-        setPredictions(newPredictions);
+          const tickerSeed = String(asset.symbol).split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+          const seedShift = (((tickerSeed % 100) - 50) / 10000) * predictionYears;
+          let totalShift = seedShift;
+          if (totalShift > cfg.clamp) totalShift = cfg.clamp;
+          if (totalShift < -cfg.clamp) totalShift = -cfg.clamp;
+
+          const predicted = current * (1 + totalShift);
+          const confidence = Math.min(95, Math.max(30, Math.round(50 + Math.abs(totalShift) * 100)));
+          let trend: 'bullish'|'bearish'|'neutral' = 'neutral';
+          if (predicted > current * (1 + cfg.trendThreshold)) trend = 'bullish';
+          else if (predicted < current * (1 - cfg.trendThreshold)) trend = 'bearish';
+
+          return {
+            symbol: asset.symbol,
+            name: asset.name,
+            currentPrice: current,
+            predictedPrice: Math.round(predicted * 100) / 100,
+            confidence,
+            timeframe: `${predictionYears}Y`,
+            trend,
+            sentimentScore: null,
+          } as PredictionItem;
+        });
+
+        try { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); } catch(e) {}
+        setPredictions(syncPreds);
+
+        // Fetch refined predictions in parallel
+        const promises = assets.map(a => getAssetPrediction(a.symbol, predictionYears).catch(() => null));
+        const results = await Promise.all(promises);
+
+        const refined = assets.map((asset, idx) => {
+          const res = results[idx];
+          const base = syncPreds[idx];
+          if (!res || !res.predictions || res.predictions.length === 0) return base;
+          const sel = res.predictions[0];
+          return {
+            symbol: asset.symbol,
+            name: asset.name,
+            currentPrice: asset.price || 0,
+            predictedPrice: sel.predictedPrice ?? base.predictedPrice,
+            confidence: sel.confidence ?? base.confidence,
+            timeframe: sel.timeframe || base.timeframe,
+            trend: sel.trend || base.trend,
+            sentimentScore: res.sentimentScore ?? base.sentimentScore,
+          } as PredictionItem;
+        });
+
+        try { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); } catch(e) {}
+        setPredictions(refined);
       } catch (error) {
         console.error('Error fetching predictions:', error);
         setPredictions([]);
@@ -79,7 +118,7 @@ export default function PredictionsScreen() {
     };
 
     fetchPredictionsData();
-  }, [selectedTimeframe]);
+  }, [predictionYears]);
 
   const getTrendColor = (trend: 'bullish' | 'bearish' | 'neutral') => {
     switch (trend) {
@@ -106,9 +145,21 @@ export default function PredictionsScreen() {
   const PredictionCard = ({ item }: { item: PredictionItem }) => {
     const trendColor = getTrendColor(item.trend);
     const trendBgColor = getTrendBgColor(item.trend);
+    try { console.log && console.log('Rendering Stock:', item.symbol, item.predictedPrice); } catch (e) {}
     const percentDiff = item.currentPrice
       ? (((item.predictedPrice - item.currentPrice) / item.currentPrice) * 100).toFixed(2)
       : '0.00';
+    const percentNum = Math.abs(parseFloat(percentDiff)) || 0;
+    const targetPercentWidth = Math.min(100, percentNum * 10);
+    const animatedPercent = useRef(new Animated.Value(targetPercentWidth)).current;
+
+    useEffect(() => {
+      Animated.timing(animatedPercent, {
+        toValue: targetPercentWidth,
+        duration: 320,
+        useNativeDriver: false,
+      }).start();
+    }, [targetPercentWidth]);
 
     return (
       <View
@@ -267,11 +318,11 @@ export default function PredictionsScreen() {
               overflow: 'hidden',
             }}
           >
-            <View
+            <Animated.View
               style={{
                 height: '100%',
-                width: `${Math.min(100, Math.abs(parseFloat(percentDiff)) * 10)}%`,
                 backgroundColor: trendColor,
+                width: animatedPercent.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }),
               }}
             />
           </View>
@@ -422,39 +473,14 @@ export default function PredictionsScreen() {
           </View>
         </View>
 
-        {/* Timeframe Selector */}
-        <View
-          style={{
-            flexDirection: 'row',
-            gap: 8,
+        <PredictionRangeSlider
+          years={predictionYears}
+          onYearsChange={(y) => {
+            // ensure slider updates are applied immediately
+            try { console.debug && console.debug('PredictionsScreen.sliderChange', y); } catch(e) {}
+            setPredictionYears(y);
           }}
-        >
-          {timeframes.map((tf) => (
-            <TouchableOpacity
-              key={tf}
-              onPress={() => setSelectedTimeframe(tf)}
-              style={{
-                flex: 1,
-                paddingVertical: 8,
-                paddingHorizontal: 12,
-                borderRadius: 6,
-                backgroundColor:
-                  selectedTimeframe === tf ? '#2563eb' : '#f3f4f6',
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: '600',
-                  color: selectedTimeframe === tf ? '#ffffff' : '#4b5563',
-                  textAlign: 'center',
-                }}
-              >
-                {tf}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        />
       </View>
 
       {/* Predictions List */}

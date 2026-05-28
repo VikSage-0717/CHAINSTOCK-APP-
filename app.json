@@ -7,19 +7,25 @@
     "icon": "./assets/icon.png",
     "scheme": "chainstock",
     "userInterfaceStyle": "light",
+
+    "platforms": ["ios", "android", "web"],
+
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+
     "assetBundlePatterns": [
       "**/*"
     ],
+
     "ios": {
       "supportsTabletMode": true,
       "bundleIdentifier": "com.chainstock.app",
       "buildNumber": "1"
     },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -28,9 +34,9 @@
       "package": "com.chainstock.app",
       "versionCode": 1
     },
+
     "web": {
       "bundler": "metro",
-      "output": "single",
       "favicon": "./assets/favicon.png"
     }
   }

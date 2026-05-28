@@ -1,6 +1,10 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+// React Native utils - simplified version for mobile
+// clsx equivalent for React Native styles
+export function cn(...inputs: any[]): any[] {
+  return inputs.filter(Boolean).flat();
+}
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+// Simple style merger
+export function mergeStyles(...styles: any[]): any {
+  return Object.assign({}, ...styles.filter(Boolean));
 }

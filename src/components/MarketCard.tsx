@@ -1,4 +1,16 @@
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import React from 'react';
+
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
+
+import {
+  TrendingUp,
+  TrendingDown,
+} from 'lucide-react-native';
 
 interface MarketCardProps {
   symbol: string;
@@ -22,34 +34,154 @@ export default function MarketCard({
   const isPositive = change >= 0;
 
   return (
-    <div
-      onClick={onClick}
-      className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 active:scale-98 transition-transform cursor-pointer"
+    <TouchableOpacity
+      style={styles.card}
+      onPress={onClick}
+      activeOpacity={0.9}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <h3 className="font-semibold text-gray-900">{symbol}</h3>
-          <p className="text-sm text-gray-500">{name}</p>
-        </div>
-        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-          {type === 'crypto' ? 'CRYPTO' : 'STOCK'}
-        </span>
-      </div>
+      {/* TOP SECTION */}
+      <View style={styles.topRow}>
+        <View>
+          <Text style={styles.symbol}>
+            {symbol}
+          </Text>
 
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="text-2xl font-bold text-gray-900">
-            ${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
-        </div>
+          <Text style={styles.name}>
+            {name}
+          </Text>
+        </View>
 
-        <div className={`flex items-center gap-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-          {isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-          <span className="font-semibold">
-            {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
-          </span>
-        </div>
-      </div>
-    </div>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {type === 'crypto'
+              ? 'CRYPTO'
+              : 'STOCK'}
+          </Text>
+        </View>
+      </View>
+
+      {/* BOTTOM SECTION */}
+      <View style={styles.bottomRow}>
+        <View>
+          <Text style={styles.price}>
+            $
+            {price.toLocaleString(
+              'en-US',
+              {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }
+            )}
+          </Text>
+        </View>
+
+        <View
+          style={styles.changeContainer}
+        >
+          {isPositive ? (
+            <TrendingUp
+              size={16}
+              color="#16a34a"
+            />
+          ) : (
+            <TrendingDown
+              size={16}
+              color="#dc2626"
+            />
+          )}
+
+          <Text
+            style={[
+              styles.changeText,
+              {
+                color: isPositive
+                  ? '#16a34a'
+                  : '#dc2626',
+              },
+            ]}
+          >
+            {isPositive ? '+' : ''}
+            {changePercent.toFixed(2)}
+            %
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+
+    elevation: 2,
+  },
+
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+
+  symbol: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+
+  name: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+
+  badge: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+
+  price: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+
+  changeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  changeText: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginLeft: 5,
+  },
+});

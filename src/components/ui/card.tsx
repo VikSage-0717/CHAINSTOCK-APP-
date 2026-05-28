@@ -1,92 +1,66 @@
-import * as React from "react";
+import React from 'react';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 
-import { cn } from "./utils";
-
-function Card({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card"
-      className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border",
-        className,
-      )}
-      {...props}
-    />
-  );
+interface CardProps {
+  children?: React.ReactNode;
+  style?: ViewStyle | ViewStyle[];
 }
 
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-header"
-      className={cn(
-        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 pt-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
-        className,
-      )}
-      {...props}
-    />
-  );
+function Card({ children, style }: CardProps) {
+  return <View style={[styles.card].concat(style as any)}>{children}</View>;
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <h4
-      data-slot="card-title"
-      className={cn("leading-none", className)}
-      {...props}
-    />
-  );
+function CardHeader({ children, style }: CardProps) {
+  return <View style={[styles.cardHeader].concat(style as any)}>{children}</View>;
 }
 
-function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <p
-      data-slot="card-description"
-      className={cn("text-muted-foreground", className)}
-      {...props}
-    />
-  );
+function CardTitle({ children, style }: CardProps) {
+  return <Text style={[styles.cardTitle].concat(style as any)}>{children}</Text>;
 }
 
-function CardAction({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-action"
-      className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className,
-      )}
-      {...props}
-    />
-  );
+function CardDescription({ children, style }: CardProps) {
+  return <Text style={[styles.cardDescription].concat(style as any)}>{children}</Text>;
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-content"
-      className={cn("px-6 [&:last-child]:pb-6", className)}
-      {...props}
-    />
-  );
+function CardAction({ children, style }: any) {
+  return <View style={style}>{children}</View>;
 }
 
-function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-footer"
-      className={cn("flex items-center px-6 pb-6 [.border-t]:pt-6", className)}
-      {...props}
-    />
-  );
+function CardContent({ children, style }: any) {
+  return <View style={[styles.cardContent].concat(style as any)}>{children}</View>;
 }
 
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardAction,
-  CardDescription,
-  CardContent,
-};
+function CardFooter({ children, style }: any) {
+  return <View style={[styles.cardFooter].concat(style as any)}>{children}</View>;
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 16,
+  },
+  cardHeader: {
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  cardDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  cardContent: {
+    paddingTop: 8,
+  },
+  cardFooter: {
+    marginTop: 12,
+  },
+});
+
+export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };

@@ -7,14 +7,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import {
-  VictoryChart,
-  VictoryLine,
-  VictoryTheme,
-  VictoryAxis,
-  VictoryArea,
-  VictoryVoronoiContainer,
-} from 'victory-native';
+import { LineChart } from 'react-native-chart-kit';
 import { Asset } from '../utils/mockData';
 import { getAssetHistory, getAssetNews } from '../utils/api';
 import { addHolding } from '../utils/portfolio';
@@ -304,37 +297,55 @@ export default function AssetDetailScreen() {
           </View>
 
           {victoryData.length > 0 ? (
-            <VictoryChart
-              theme={VictoryTheme.material}
-              scale={{ x: 'time' }}
-              domain={victoryDomain}
-              width={Math.max(300, SCREEN_WIDTH - 32)}
-              height={220}
-              containerComponent={<VictoryVoronoiContainer labels={({ datum }) => `${new Date(datum.x).toLocaleDateString()}\n$${datum.y}`} />}
-            >
-              <VictoryAxis
-                dependentAxis
-                style={{
-                  grid: { stroke: '#f3f4f6' },
-                  axis: { stroke: '#e5e7eb' },
-                  tickLabels: { fontSize: 10, padding: 6, fill: '#6b7280' },
-                }}
-              />
+            (() => {
+              const labels = victoryData.map(d => new Date(d.x).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+              const dataValues = victoryData.map(d => Number(d.y));
 
-              <VictoryAxis
-                tickValues={victoryData.filter((_, i) => i % Math.max(1, Math.floor(victoryData.length / 5)) === 0).map(d => d.x)}
-                tickFormat={(t) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                style={{ tickLabels: { fontSize: 10, padding: 6, fill: '#6b7280' }, axis: { stroke: '#e5e7eb' } }}
-              />
+              // reduce label count if too many
+              const maxLabels = 6;
+              let displayLabels = labels;
+              if (labels.length > maxLabels) {
+                const step = Math.max(1, Math.floor(labels.length / (maxLabels - 1)));
+                displayLabels = labels.filter((_, i) => i % step === 0);
+              }
 
-              <VictoryArea data={victoryData} interpolation="monotoneX" style={{ data: { fill: isPositive ? '#10b98122' : '#ef444422' } }} />
+              const chartData = {
+                labels: displayLabels,
+                datasets: [
+                  {
+                    data: dataValues,
+                    strokeWidth: 3,
+                  },
+                ],
+              };
 
-              <VictoryLine
-                data={victoryData}
-                interpolation="monotoneX"
-                style={{ data: { stroke: isPositive ? '#10b981' : '#ef4444', strokeWidth: 3 } }}
-              />
-            </VictoryChart>
+              const chartConfig = {
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 2,
+                color: (opacity = 1) => (isPositive ? `rgba(16,185,129,${opacity})` : `rgba(239,68,68,${opacity})`),
+                labelColor: (opacity = 1) => `rgba(107,114,128,${opacity})`,
+                propsForDots: {
+                  r: '0',
+                },
+              };
+
+              return (
+                <LineChart
+                  data={chartData}
+                  width={Math.max(300, SCREEN_WIDTH - 32)}
+                  height={220}
+                  yAxisSuffix=""
+                  chartConfig={chartConfig}
+                  bezier
+                  withShadow={true}
+                  withInnerLines={true}
+                  withVerticalLabels={true}
+                  withHorizontalLines={true}
+                  style={{ borderRadius: 8 }}
+                />
+              );
+            })()
           ) : (
             <Text style={{ fontSize: 12, color: '#6b7280' }}>No chart data</Text>
           )}

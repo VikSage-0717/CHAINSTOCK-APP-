@@ -1,31 +1,40 @@
-"use client";
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
 
-import * as React from "react";
-import * as ProgressPrimitive from "@radix-ui/react-progress";
+interface ProgressProps {
+  value?: number;
+  max?: number;
+}
 
-import { cn } from "./utils";
+function Progress({ value = 0, max = 100 }: ProgressProps) {
+  const percentage = Math.min((value / max) * 100, 100);
 
-function Progress({
-  className,
-  value,
-  ...props
-}: React.ComponentProps<typeof ProgressPrimitive.Root>) {
   return (
-    <ProgressPrimitive.Root
-      data-slot="progress"
-      className={cn(
-        "bg-primary/20 relative h-2 w-full overflow-hidden rounded-full",
-        className,
-      )}
-      {...props}
-    >
-      <ProgressPrimitive.Indicator
-        data-slot="progress-indicator"
-        className="bg-primary h-full w-full flex-1 transition-all"
-        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+    <View style={styles.container}>
+      <View
+        style={[
+          styles.bar,
+          {
+            width: `${percentage}%`,
+          },
+        ]}
       />
-    </ProgressPrimitive.Root>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  bar: {
+    height: '100%',
+    backgroundColor: '#2563eb',
+  },
+});
 
 export { Progress };

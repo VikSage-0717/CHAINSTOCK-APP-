@@ -1,4 +1,16 @@
-import { Calendar, TrendingDown, TrendingUp } from 'lucide-react';
+import React from 'react';
+
+import {
+  View,
+  Text,
+  StyleSheet,
+} from 'react-native';
+
+import {
+  Calendar,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react-native';
 
 interface HistoricalEventCardProps {
   year: number;
@@ -17,42 +29,206 @@ export default function HistoricalEventCard({
   impactType,
   percentChange,
 }: HistoricalEventCardProps) {
-  const impactColors = {
-    negative: 'border-l-red-500 bg-red-50',
-    positive: 'border-l-green-500 bg-green-50',
-    mixed: 'border-l-yellow-500 bg-yellow-50',
+  const impactStyles = {
+    negative: {
+      borderColor: '#dc2626',
+      backgroundColor: '#fef2f2',
+    },
+
+    positive: {
+      borderColor: '#16a34a',
+      backgroundColor: '#f0fdf4',
+    },
+
+    mixed: {
+      borderColor: '#ca8a04',
+      backgroundColor: '#fefce8',
+    },
   };
 
+  const currentStyle =
+    impactStyles[impactType];
+
+  const isNegative =
+    percentChange !== undefined &&
+    percentChange < 0;
+
   return (
-    <div className={`border-l-4 ${impactColors[impactType]} rounded-r-xl p-4 mb-3`}>
-      <div className="flex items-start gap-3">
-        <div className="bg-white rounded-lg p-2 shadow-sm">
-          <Calendar size={20} className="text-gray-700" />
-        </div>
+    <View
+      style={[
+        styles.card,
+        {
+          borderLeftColor:
+            currentStyle.borderColor,
 
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-bold text-gray-900">{year}</span>
-            {percentChange !== undefined && (
-              <span className={`flex items-center gap-1 text-sm font-semibold ${
-                percentChange < 0 ? 'text-red-600' : 'text-green-600'
-              }`}>
-                {percentChange < 0 ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
-                {percentChange >= 0 ? '+' : ''}{percentChange}%
-              </span>
+          backgroundColor:
+            currentStyle.backgroundColor,
+        },
+      ]}
+    >
+      <View style={styles.row}>
+        {/* ICON */}
+        <View style={styles.iconContainer}>
+          <Calendar
+            size={20}
+            color="#374151"
+          />
+        </View>
+
+        {/* CONTENT */}
+        <View style={styles.content}>
+          {/* YEAR + CHANGE */}
+          <View style={styles.topRow}>
+            <Text style={styles.year}>
+              {year}
+            </Text>
+
+            {percentChange !==
+              undefined && (
+              <View
+                style={
+                  styles.percentContainer
+                }
+              >
+                {isNegative ? (
+                  <TrendingDown
+                    size={14}
+                    color="#dc2626"
+                  />
+                ) : (
+                  <TrendingUp
+                    size={14}
+                    color="#16a34a"
+                  />
+                )}
+
+                <Text
+                  style={[
+                    styles.percentText,
+                    {
+                      color: isNegative
+                        ? '#dc2626'
+                        : '#16a34a',
+                    },
+                  ]}
+                >
+                  {percentChange >= 0
+                    ? '+'
+                    : ''}
+                  {percentChange}%
+                </Text>
+              </View>
             )}
-          </div>
+          </View>
 
-          <h4 className="font-semibold text-gray-900 mb-2">{event}</h4>
+          {/* EVENT */}
+          <Text style={styles.eventTitle}>
+            {event}
+          </Text>
 
-          <p className="text-sm text-gray-700 mb-2">{description}</p>
+          {/* DESCRIPTION */}
+          <Text style={styles.description}>
+            {description}
+          </Text>
 
-          <div className="bg-white rounded-lg p-2 border border-gray-200">
-            <p className="text-xs text-gray-500 mb-1">Market Impact:</p>
-            <p className="text-sm text-gray-900">{marketImpact}</p>
-          </div>
-        </div>
-      </div>
-    </div>
+          {/* MARKET IMPACT */}
+          <View
+            style={styles.impactBox}
+          >
+            <Text style={styles.impactLabel}>
+              Market Impact:
+            </Text>
+
+            <Text style={styles.impactText}>
+              {marketImpact}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    borderLeftWidth: 4,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+  },
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+
+  iconContainer: {
+    backgroundColor: '#ffffff',
+    padding: 10,
+    borderRadius: 12,
+    marginRight: 12,
+    elevation: 2,
+  },
+
+  content: {
+    flex: 1,
+  },
+
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+
+  year: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginRight: 10,
+  },
+
+  percentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  percentText: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 4,
+  },
+
+  eventTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+
+  description: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+
+  impactBox: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 12,
+  },
+
+  impactLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+
+  impactText: {
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 20,
+  },
+});

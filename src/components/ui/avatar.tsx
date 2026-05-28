@@ -1,53 +1,71 @@
-"use client";
+import React from 'react';
+import { View, Image, Text, StyleSheet, ViewStyle } from 'react-native';
 
-import * as React from "react";
-import * as AvatarPrimitive from "@radix-ui/react-avatar";
+interface AvatarProps {
+  style?: ViewStyle;
+  children?: React.ReactNode;
+}
 
-import { cn } from "./utils";
-
-function Avatar({
-  className,
-  ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Root>) {
+function Avatar({ style, children }: AvatarProps) {
   return (
-    <AvatarPrimitive.Root
-      data-slot="avatar"
-      className={cn(
-        "relative flex size-10 shrink-0 overflow-hidden rounded-full",
-        className,
-      )}
-      {...props}
+    <View style={[styles.avatar, style]}>
+      {children}
+    </View>
+  );
+}
+
+interface AvatarImageProps {
+  src?: string;
+  alt?: string;
+}
+
+function AvatarImage({ src, alt }: AvatarImageProps) {
+  if (!src) return null;
+  return (
+    <Image
+      source={{ uri: src }}
+      style={styles.image}
+      defaultSource={require('react-native/Libraries/NewAppScreen/components/logo.png')}
     />
   );
 }
 
-function AvatarImage({
-  className,
-  ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+interface AvatarFallbackProps {
+  children?: React.ReactNode;
+}
+
+function AvatarFallback({ children }: AvatarFallbackProps) {
   return (
-    <AvatarPrimitive.Image
-      data-slot="avatar-image"
-      className={cn("aspect-square size-full", className)}
-      {...props}
-    />
+    <View style={styles.fallback}>
+      <Text style={styles.fallbackText}>{children}</Text>
+    </View>
   );
 }
 
-function AvatarFallback({
-  className,
-  ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
-  return (
-    <AvatarPrimitive.Fallback
-      data-slot="avatar-fallback"
-      className={cn(
-        "bg-muted flex size-full items-center justify-center rounded-full",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+const styles = StyleSheet.create({
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#e5e7eb',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  fallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#d1d5db',
+  },
+  fallbackText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+});
 
 export { Avatar, AvatarImage, AvatarFallback };
